@@ -1,0 +1,31 @@
+{
+    "name": "curser/pos",
+    "description": "Consignment Store POS System - Multi-tenant SaaS",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.4",
+        "krubio/perfect-session": "^0.1",
+        "krubio/perfect-router": "^0.2",
+        "krubio/perfect-logger": "^0.1",
+        "krubio/perfect-database": "^0.1",
+        "krubio/perfect-container-psr-11": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "CurserPos\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CurserPos\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}

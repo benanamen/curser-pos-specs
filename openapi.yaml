@@ -1,0 +1,986 @@
+openapi: 3.0.3
+info:
+  title: Curser POS API
+  description: Multi-tenant SaaS POS system for consignment stores
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://curser-pos-specs.test
+    description: Laragon local
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Global health check
+      tags: [Health]
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/health:
+    get:
+      summary: Tenant-scoped health check
+      tags: [Health]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/signup:
+    post:
+      summary: Self-service signup (creates user + tenant)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, store_name, store_slug]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                store_name: { type: string }
+                store_slug: { type: string, pattern: '^[a-zA-Z0-9_-]+$' }
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Validation error
+
+  /api/v1/auth/login:
+    post:
+      summary: Login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Invalid credentials
+
+  /api/v1/auth/logout:
+    post:
+      summary: Logout
+      tags: [Auth]
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Request password reset
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: If email exists, reset link sent
+
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset password with token
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string }
+                new_password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Password reset
+        '400':
+          description: Invalid or expired token
+
+  /api/v1/auth/accept-invite:
+    post:
+      summary: Accept staff invite
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Invite accepted
+        '400':
+          description: Invalid or expired token
+
+  /api/v1/platform/login:
+    post:
+      summary: Platform/super-admin login
+      tags: [Platform]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Invalid credentials
+
+  /api/v1/platform/logout:
+    post:
+      summary: Platform logout
+      tags: [Platform]
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/me:
+    get:
+      summary: Current user + tenant context
+      tags: [Auth]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not authenticated
+
+  /t/{slug}/api/v1/users:
+    get:
+      summary: List tenant users/staff
+      tags: [Users]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Invite staff (admin only)
+      tags: [Users]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role_id]
+              properties:
+                email: { type: string, format: email }
+                role_id: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Invite sent
+        '400':
+          description: Missing fields
+
+  /t/{slug}/api/v1/users/{tenant_user_id}:
+    patch:
+      summary: Update user role or active status
+      tags: [Users]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: tenant_user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role_id: { type: string, format: uuid }
+                active: { type: boolean }
+      responses:
+        '200':
+          description: Updated
+        '404':
+          description: User not found
+
+  /t/{slug}/api/v1/audit:
+    get:
+      summary: List activity log (admin only)
+      tags: [Audit]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: date_from
+          in: query
+          schema: { type: string }
+        - name: date_to
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/store/config:
+    get:
+      summary: Get store config
+      tags: [Store Config]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update store config
+      tags: [Store Config]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                default_commission_pct: { type: number }
+                tax_config: { type: array }
+                consignment_terms: { type: string }
+                expiration_days: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/portal/me:
+    get:
+      summary: Consignor portal - balance, sales, payouts
+      tags: [Consignor Portal]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: token
+          in: query
+          schema: { type: string }
+        - name: X-Consignor-Portal-Token
+          in: header
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Invalid token
+
+  /t/{slug}/api/v1/portal/items:
+    get:
+      summary: Vendor portal - list my items
+      tags: [Vendor Portal]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: token
+          in: query
+          schema: { type: string }
+        - name: X-Consignor-Portal-Token
+          in: header
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: Vendor portal not on plan
+    post:
+      summary: Vendor portal - create item
+      tags: [Vendor Portal]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: token
+          in: query
+          schema: { type: string }
+        - name: X-Consignor-Portal-Token
+          in: header
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sku: { type: string }
+                barcode: { type: string }
+                category_id: { type: string }
+                description: { type: string }
+                size: { type: string }
+                condition: { type: string }
+                price: { type: number }
+                store_share_pct: { type: number }
+                consignor_share_pct: { type: number }
+                intake_date: { type: string }
+                expiry_date: { type: string }
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Validation error
+
+  /t/{slug}/api/v1/portal/items/{id}:
+    get:
+      summary: Vendor portal - get item
+      tags: [Vendor Portal]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: token
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Item not found
+    put:
+      summary: Vendor portal - update item
+      tags: [Vendor Portal]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: token
+          in: query
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string }
+                price: { type: number }
+                size: { type: string }
+                condition: { type: string }
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Item not found
+
+  /t/{slug}/api/v1/portal/items/{id}/price:
+    patch:
+      summary: Vendor portal - update item price only
+      tags: [Vendor Portal]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: token
+          in: query
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [price]
+              properties:
+                price: { type: number }
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Item not found
+
+  /t/{slug}/api/v1/locations:
+    get:
+      summary: List locations
+      tags: [Locations]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create location
+      tags: [Locations]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                address: { type: string }
+                tax_rates: { type: array }
+      responses:
+        '201':
+          description: Created
+
+  /t/{slug}/api/v1/locations/{id}:
+    get:
+      summary: Get location
+      tags: [Locations]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update location
+      tags: [Locations]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                address: { type: string }
+                tax_rates: { type: array }
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete location
+      tags: [Locations]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/categories:
+    get:
+      summary: List categories
+      tags: [Categories]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create category
+      tags: [Categories]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                sort_order: { type: integer }
+                tax_exempt: { type: boolean }
+      responses:
+        '201':
+          description: Created
+
+  /t/{slug}/api/v1/categories/{id}:
+    get:
+      summary: Get category
+      tags: [Categories]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update category
+      tags: [Categories]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                sort_order: { type: integer }
+                tax_exempt: { type: boolean }
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete category
+      tags: [Categories]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/consignors:
+    get:
+      summary: List consignors
+      tags: [Consignors]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create consignor
+      tags: [Consignors]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, name]
+              properties:
+                slug: { type: string }
+                name: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                address: { type: string }
+                default_commission_pct: { type: number }
+      responses:
+        '201':
+          description: Created
+
+  /t/{slug}/api/v1/consignors/{id}:
+    get:
+      summary: Get consignor
+      tags: [Consignors]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update consignor
+      tags: [Consignors]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                slug: { type: string }
+                name: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                address: { type: string }
+                default_commission_pct: { type: number }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/consignors/{id}/portal-token:
+    post:
+      summary: Generate consignor portal token
+      tags: [Consignors]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/items:
+    get:
+      summary: List/search items
+      tags: [Items]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: consignor_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create item
+      tags: [Items]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, price]
+              properties:
+                sku: { type: string }
+                barcode: { type: string }
+                consignor_id: { type: string }
+                category_id: { type: string }
+                description: { type: string }
+                size: { type: string }
+                condition: { type: string }
+                price: { type: number }
+                store_share_pct: { type: number }
+                consignor_share_pct: { type: number }
+                intake_date: { type: string }
+                expiry_date: { type: string }
+      responses:
+        '201':
+          description: Created
+
+  /t/{slug}/api/v1/items/{id}:
+    get:
+      summary: Get item
+      tags: [Items]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update item
+      tags: [Items]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sku: { type: string }
+                barcode: { type: string }
+                description: { type: string }
+                size: { type: string }
+                condition: { type: string }
+                price: { type: number }
+                status: { type: string }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/pos/checkout:
+    post:
+      summary: Complete sale
+      tags: [POS]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cart, payments]
+              properties:
+                cart: { type: array }
+                payments: { type: array }
+                held_id: { type: string }
+                register_id: { type: string }
+                location_id: { type: string }
+                discount_amount: { type: number }
+                tax_amount: { type: number }
+                tax_exempt: { type: boolean }
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Validation error
+
+  /t/{slug}/api/v1/pos/hold:
+    post:
+      summary: Hold cart
+      tags: [POS]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cart, payments]
+              properties:
+                cart: { type: array }
+                payments: { type: array }
+      responses:
+        '201':
+          description: Created
+
+  /t/{slug}/api/v1/pos/held:
+    get:
+      summary: List held sales
+      tags: [POS]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/pos/sales:
+    get:
+      summary: List sales
+      tags: [POS]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: from
+          in: query
+          schema: { type: string }
+        - name: to
+          in: query
+          schema: { type: string }
+        - name: register_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/pos/sales/{id}:
+    get:
+      summary: Get sale/receipt
+      tags: [POS]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Refund sale
+      tags: [POS]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Validation error
+
+  /t/{slug}/api/v1/pos/sales/{id}/void:
+    post:
+      summary: Void sale
+      tags: [POS]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Validation error
+
+  /t/{slug}/api/v1/payouts/run:
+    post:
+      summary: Run payout batch
+      tags: [Payouts]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                consignor_ids: { type: array, items: { type: string } }
+                minimum_amount: { type: number }
+                method: { type: string }
+      responses:
+        '200':
+          description: OK
+
+  /t/{slug}/api/v1/registers:
+    get:
+      summary: List registers
+      tags: [Registers]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create register
+      tags: [Registers]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [register_id]
+              properties:
+                register_id: { type: string }
+                location_id: { type: string }
+      responses:
+        '201':
+          description: Created
+
+  /t/{slug}/api/v1/dashboard:
+    get:
+      summary: Dashboard metrics
+      tags: [Reports]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: OK
+
+components:
+  parameters:
+    TenantSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9_-]+$'
+      description: Tenant store slug
+
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: PHPSESSID
+      description: Session cookie after login
+    portalToken:
+      type: apiKey
+      in: query
+      name: token
+      description: Consignor portal token
+    portalTokenHeader:
+      type: apiKey
+      in: header
+      name: X-Consignor-Portal-Token
+      description: Consignor portal token (alternative to query param)
