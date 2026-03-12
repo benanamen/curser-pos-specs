@@ -135,4 +135,73 @@ final class AuthServiceTest extends TestCase
         $service = new AuthService($userRepo, $provisioning, $session);
         $this->assertSame('t1', $service->getCurrentTenantId());
     }
+
+    public function testSignupThrowsWhenEmailExists(): void
+    {
+        $user = new User('id-1', 'existing@test.com', 'active', new \DateTimeImmutable(), new \DateTimeImmutable());
+        $userRepo = $this->createMock(UserRepositoryInterface::class);
+        $userRepo->method('findByEmail')->willReturn($user);
+        $provisioning = $this->createMock(TenantProvisioningService::class);
+
+        $service = new AuthService($userRepo, $provisioning, $this->createMock(Session::class));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Email already registered');
+        $service->signup('existing@test.com', 'password123', 'Store', 'mystore');
+    }
+
+    public function testSignupThrowsWhenSlugTaken(): void
+    {
+        $userRepo = $this->createMock(UserRepositoryInterface::class);
+        $userRepo->method('findByEmail')->willReturn(null);
+        $provisioning = $this->createMock(TenantProvisioningService::class);
+        $provisioning->method('slugExists')->with('taken')->willReturn(true);
+
+        $service = new AuthService($userRepo, $provisioning, $this->createMock(Session::class));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Store slug already taken');
+        $service->signup('new@test.com', 'password123', 'Store', 'taken');
+    }
+
+    public function testSignupThrowsWhenPasswordTooShort(): void
+    {
+        $userRepo = $this->createMock(UserRepositoryInterface::class);
+        $userRepo->method('findByEmail')->willReturn(null);
+        $provisioning = $this->createMock(TenantProvisioningService::class);
+        $provisioning->method('slugExists')->willReturn(false);
+
+        $service = new AuthService($userRepo, $provisioning, $this->createMock(Session::class));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Password must be at least 8 characters');
+        $service->signup('new@test.com', 'short', 'Store', 'mystore');
+    }
+
+    public function testSignupThrowsWhenSlugInvalid(): void
+    {
+        $userRepo = $this->createMock(UserRepositoryInterface::class);
+        $userRepo->method('findByEmail')->willReturn(null);
+        $provisioning = $this->createMock(TenantProvisioningService::class);
+        $provisioning->method('slugExists')->willReturn(false);
+
+        $service = new AuthService($userRepo, $provisioning, $this->createMock(Session::class));
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Store slug can only contain letters');
+        $service->signup('new@test.com', 'password123', 'Store', 'invalid slug!');
+    }
+
+    public function testSignupSuccess(): void
+    {
+        $userRepo = $this->createMock(UserRepositoryInterface::class);
+        $userRepo->method('findByEmail')->willReturn(null);
+        $provisioning = $this->createMock(TenantProvisioningService::class);
+        $provisioning->method('slugExists')->willReturn(false);
+        $provisioning->method('provision')->with('My Store', 'mystore', 'new@test.com', 'password123')
+            ->willReturn(['tenant_id' => 't1', 'user_id' => 'u1']);
+        $session = $this->createMock(Session::class);
+        $session->expects($this->exactly(2))->method('set');
+
+        $service = new AuthService($userRepo, $provisioning, $session);
+        $result = $service->signup('new@test.com', 'password123', 'My Store', 'mystore');
+        $this->assertSame('u1', $result['user']['id']);
+        $this->assertSame('mystore', $result['tenant']['slug']);
+    }
 }

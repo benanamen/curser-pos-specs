@@ -8,7 +8,7 @@ use CurserPos\Domain\Consignor\Consignor;
 use CurserPos\Domain\Consignor\ConsignorBalance;
 use CurserPos\Domain\Consignor\ConsignorRepository;
 
-final class ConsignorService
+class ConsignorService
 {
     public function __construct(
         private readonly ConsignorRepository $consignorRepository
@@ -22,13 +22,14 @@ final class ConsignorService
         ?string $phone = null,
         ?string $address = null,
         float $defaultCommissionPct = 50.0,
-        ?\DateTimeImmutable $agreementSignedAt = null
+        ?\DateTimeImmutable $agreementSignedAt = null,
+        ?string $notes = null
     ): Consignor {
         $slug = $this->normalizeSlug($slug);
         if ($this->consignorRepository->slugExists($slug)) {
             throw new \InvalidArgumentException("Consignor slug '{$slug}' already exists");
         }
-        $id = $this->consignorRepository->create($slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementSignedAt);
+        $id = $this->consignorRepository->create($slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementSignedAt, $notes);
         $consignor = $this->consignorRepository->findById($id);
         if ($consignor === null) {
             throw new \RuntimeException('Failed to create consignor');

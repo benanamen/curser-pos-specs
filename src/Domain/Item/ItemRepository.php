@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Item;
 
 use PDO;
 
-final class ItemRepository
+class ItemRepository
 {
     public function __construct(
         private readonly PDO $pdo

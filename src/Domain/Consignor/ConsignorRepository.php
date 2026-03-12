@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Consignor;
 
 use PDO;
 
-final class ConsignorRepository
+class ConsignorRepository
 {
     public function __construct(
         private readonly PDO $pdo
@@ -104,7 +104,8 @@ final class ConsignorRepository
         ?string $phone = null,
         ?string $address = null,
         float $defaultCommissionPct = 50.0,
-        ?\DateTimeImmutable $agreementSignedAt = null
+        ?\DateTimeImmutable $agreementSignedAt = null,
+        ?string $notes = null
     ): string {
         $id = $this->generateUuid();
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
@@ -114,7 +115,7 @@ final class ConsignorRepository
             'INSERT INTO consignors (id, slug, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?)'
         );
-        $stmt->execute([$id, $slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementDate, 'active', null, $now, $now]);
+        $stmt->execute([$id, $slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementDate, 'active', $notes, $now, $now]);
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO consignor_balances (id, consignor_id, balance, pending_sales, paid_out, updated_at) VALUES (?, ?, 0, 0, 0, ?)'

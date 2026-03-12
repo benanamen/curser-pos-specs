@@ -81,9 +81,10 @@ final class ConsignorController
         $agreementSignedAt = isset($input['agreement_signed_at']) && $input['agreement_signed_at'] !== ''
             ? new \DateTimeImmutable((string) $input['agreement_signed_at'])
             : null;
+        $notes = isset($input['notes']) && $input['notes'] !== '' ? (string) $input['notes'] : null;
 
         try {
-            $consignor = $this->consignorService->createConsignor($slugInput, $name, $email, $phone, $address, $commission, $agreementSignedAt);
+            $consignor = $this->consignorService->createConsignor($slugInput, $name, $email, $phone, $address, $commission, $agreementSignedAt, $notes);
             $this->json(201, $this->consignorToArray($consignor));
         } catch (\InvalidArgumentException $e) {
             $this->json(400, ['error' => $e->getMessage()]);

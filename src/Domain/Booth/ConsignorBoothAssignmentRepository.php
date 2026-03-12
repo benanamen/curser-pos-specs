@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Booth;
 
 use PDO;
 
-final class ConsignorBoothAssignmentRepository
+class ConsignorBoothAssignmentRepository
 {
     public function __construct(
         private readonly PDO $pdo

@@ -51,6 +51,31 @@ final class TenantRepository implements TenantRepositoryInterface
     }
 
     /**
+     * @return list<Tenant>
+     */
+    public function list(): array
+    {
+        $stmt = $this->pdo->query(
+            'SELECT id, slug, name, status, plan_id, settings, created_at, updated_at FROM tenants ORDER BY created_at DESC'
+        );
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $result = [];
+        foreach ($rows as $row) {
+            $result[] = $this->hydrate($row);
+        }
+        return $result;
+    }
+
+    public function update(string $id, string $name, string $status, string $planId): void
+    {
+        $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+        $stmt = $this->pdo->prepare(
+            'UPDATE tenants SET name = ?, status = ?, plan_id = ?, updated_at = ? WHERE id = ?'
+        );
+        $stmt->execute([$name, $status, $planId, $now, $id]);
+    }
+
+    /**
      * @param array<string, mixed> $row
      */
     private function hydrate(array $row): Tenant

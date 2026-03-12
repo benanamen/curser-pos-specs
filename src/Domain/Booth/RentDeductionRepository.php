@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Booth;
 
 use PDO;
 
-final class RentDeductionRepository
+class RentDeductionRepository
 {
     public function __construct(
         private readonly PDO $pdo

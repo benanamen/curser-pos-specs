@@ -7,6 +7,7 @@ namespace CurserPos\Http\Middleware;
 use CurserPos\Domain\Tenant\TenantUserRepository;
 use CurserPos\Domain\User\UserRepositoryInterface;
 use CurserPos\Http\RequestContext;
+use CurserPos\Service\AuditService;
 use PerfectApp\Session\Session;
 
 final class AuthMiddleware
@@ -18,7 +19,8 @@ final class AuthMiddleware
     public function __construct(
         private readonly Session $session,
         private readonly UserRepositoryInterface $userRepository,
-        private readonly TenantUserRepository $tenantUserRepository
+        private readonly TenantUserRepository $tenantUserRepository,
+        private readonly AuditService $auditService
     ) {
     }
 
@@ -40,6 +42,16 @@ final class AuthMiddleware
         if ($platformUserId !== null && $context->tenant !== null) {
             $context->isSupportAccess = true;
             $context->supportUserId = (string) $platformUserId;
+            $this->auditService->log(
+                $context->tenant->id,
+                null,
+                (string) $platformUserId,
+                'support.access',
+                'tenant',
+                $context->tenant->id,
+                ['request_uri' => $context->requestUri, 'method' => $context->requestMethod],
+                $context->clientIp
+            );
             $next();
             return;
         }

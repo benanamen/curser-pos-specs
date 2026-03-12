@@ -188,6 +188,14 @@ An OpenAPI 3.0 specification is available at `openapi.yaml`. Use it with tools l
 
 Base URL for local dev: `http://localhost:8000` or `https://curser-pos-specs.test`
 
+## Platform Support Admin Seed
+
+Create or update the first platform admin account (used for support/super-admin access):
+
+```bash
+php bin/create-platform-admin.php admin@example.com "change-me-strong-password"
+```
+
 ## Testing
 
 ```bash

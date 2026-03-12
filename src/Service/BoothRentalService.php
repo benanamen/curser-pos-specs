@@ -7,7 +7,7 @@ namespace CurserPos\Service;
 use CurserPos\Domain\Booth\ConsignorBoothAssignmentRepository;
 use CurserPos\Domain\Booth\RentDeductionRepository;
 
-final class BoothRentalService
+class BoothRentalService
 {
     public function __construct(
         private readonly ConsignorBoothAssignmentRepository $assignmentRepository,

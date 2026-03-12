@@ -6,6 +6,7 @@ use CurserPos\Http\Middleware\AuthMiddleware;
 use CurserPos\Http\Middleware\ConsignorPortalMiddleware;
 use CurserPos\Http\Middleware\PermissionMiddleware;
 use CurserPos\Http\Middleware\Pipeline;
+use CurserPos\Http\Middleware\PlatformAuthMiddleware;
 use CurserPos\Http\Middleware\SchemaContextMiddleware;
 use CurserPos\Http\Middleware\TenantResolutionMiddleware;
 use PerfectApp\Container\Container;
@@ -23,10 +24,15 @@ $container->set('config.app', $appConfig);
 $container->set('config.database', $dbConfig);
 
 $container->set(PDO::class, function () use ($dbConfig): PDO {
+    static $pdo = null;
+    if ($pdo !== null) {
+        return $pdo;
+    }
     $connection = new PostgresConnection();
     $config = $dbConfig['shared'];
     $config['options'] ??= [];
-    return $connection->connect($config);
+    $pdo = $connection->connect($config);
+    return $pdo;
 });
 
 $container->set(FileLogger::class, function () {
@@ -71,11 +77,16 @@ $container->set(ConsignorPortalMiddleware::class, function (Container $c) {
     return new ConsignorPortalMiddleware($c->get(\CurserPos\Domain\Consignor\ConsignorRepository::class));
 });
 
+$container->set(PlatformAuthMiddleware::class, function (Container $c) {
+    return new PlatformAuthMiddleware($c->get(Session::class));
+});
+
 $container->set(Pipeline::class, function (Container $c) {
     $pipeline = new Pipeline($c, $c->get(Router::class));
     $pipeline->add($c->get(TenantResolutionMiddleware::class));
     $pipeline->add($c->get(SchemaContextMiddleware::class));
     $pipeline->add($c->get(ConsignorPortalMiddleware::class));
+    $pipeline->add($c->get(PlatformAuthMiddleware::class));
     $pipeline->add($c->get(AuthMiddleware::class));
     $pipeline->add($c->get(PermissionMiddleware::class));
     return $pipeline;
@@ -88,7 +99,25 @@ $container->set(\CurserPos\Domain\Tenant\TenantUserRepository::class, \CurserPos
 $container->set(\CurserPos\Domain\Audit\ActivityLogRepository::class, \CurserPos\Domain\Audit\ActivityLogRepository::class);
 $container->set(\CurserPos\Domain\User\PasswordResetTokenRepository::class, \CurserPos\Domain\User\PasswordResetTokenRepository::class);
 $container->set(\CurserPos\Domain\Platform\PlatformUserRepository::class, \CurserPos\Domain\Platform\PlatformUserRepository::class);
+$container->set(\CurserPos\Domain\Plan\PlanRepository::class, \CurserPos\Domain\Plan\PlanRepository::class);
 $container->set(\CurserPos\Domain\User\InviteTokenRepository::class, \CurserPos\Domain\User\InviteTokenRepository::class);
+$container->set(\CurserPos\Domain\Billing\TenantBillingRepository::class, \CurserPos\Domain\Billing\TenantBillingRepository::class);
+
+$appConfig = $container->get('config.app');
+$container->set(\CurserPos\Domain\Billing\BillingProviderInterface::class, function (Container $c) use ($appConfig) {
+    $provider = $appConfig['billing']['provider'] ?? 'stripe';
+    if ($provider === 'stripe') {
+        $prices = $appConfig['billing']['stripe_prices'] ?? [];
+        return new \CurserPos\Infrastructure\Billing\StripeBillingProvider(
+            $_ENV['STRIPE_SECRET_KEY'] ?? '',
+            is_array($prices) ? $prices : [],
+            $c->get(\CurserPos\Domain\Billing\TenantBillingRepository::class)
+        );
+    }
+    throw new \InvalidArgumentException('Unsupported BILLING_PROVIDER: ' . $provider);
+});
+
+$container->set(\CurserPos\Service\BillingService::class, \CurserPos\Service\BillingService::class);
 
 $container->set(\CurserPos\Infrastructure\Payment\PaymentProcessorInterface::class, function (Container $c) {
     $key = $_ENV['STRIPE_SECRET_KEY'] ?? 'test';

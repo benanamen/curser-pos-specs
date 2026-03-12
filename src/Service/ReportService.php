@@ -8,7 +8,7 @@ use CurserPos\Domain\Booth\RentDeductionRepository;
 use CurserPos\Domain\Item\Item;
 use PDO;
 
-final class ReportService
+class ReportService
 {
     public function __construct(
         private readonly PDO $pdo,

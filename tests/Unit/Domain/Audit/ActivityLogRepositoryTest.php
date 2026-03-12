@@ -51,4 +51,18 @@ final class ActivityLogRepositoryTest extends TestCase
         $this->assertCount(1, $rows);
         $this->assertSame('auth.login', $rows[0]['action']);
     }
+
+    public function testListByTenantWithFilters(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute');
+        $stmt->method('fetch')->willReturn(false);
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new ActivityLogRepository($pdo);
+        $rows = $repo->listByTenant('t1', 'sale.void', '2025-01-01', '2025-01-31', 50, 10);
+        $this->assertSame([], $rows);
+    }
 }

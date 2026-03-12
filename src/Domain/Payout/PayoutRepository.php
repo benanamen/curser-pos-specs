@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Payout;
 
 use PDO;
 
-final class PayoutRepository
+class PayoutRepository
 {
     public function __construct(
         private readonly PDO $pdo

@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Sale;
 
 use PDO;
 
-final class SaleRepository
+class SaleRepository
 {
     public function __construct(
         private readonly PDO $pdo

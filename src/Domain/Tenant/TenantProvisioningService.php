@@ -22,7 +22,7 @@ class TenantProvisioningService
     /**
      * @return array{tenant_id: string, user_id: string}
      */
-    public function provision(string $storeName, string $storeSlug, string $ownerEmail, string $ownerPassword): array
+    public function provision(string $storeName, string $storeSlug, string $ownerEmail, string $ownerPassword, ?string $planId = null): array
     {
         if ($this->tenantRepository->slugExists($storeSlug)) {
             throw new \InvalidArgumentException('Store slug already taken');
@@ -30,7 +30,7 @@ class TenantProvisioningService
 
         $userId = $this->userRepository->create($ownerEmail, password_hash($ownerPassword, PASSWORD_DEFAULT));
 
-        $tenantId = $this->createTenant($storeName, $storeSlug);
+        $tenantId = $this->createTenant($storeName, $storeSlug, $planId ?? self::DEFAULT_PLAN_ID);
         $this->linkUserToTenant($userId, $tenantId);
         $this->createTenantSchema($tenantId);
         $this->runTenantMigrations($tenantId);
@@ -47,7 +47,7 @@ class TenantProvisioningService
         return $this->tenantRepository->slugExists($slug);
     }
 
-    private function createTenant(string $name, string $slug): string
+    private function createTenant(string $name, string $slug, string $planId): string
     {
         $id = $this->generateUuid();
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
@@ -56,7 +56,7 @@ class TenantProvisioningService
             'INSERT INTO tenants (id, slug, name, status, plan_id, settings, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        $stmt->execute([$id, $slug, $name, 'active', self::DEFAULT_PLAN_ID, '{}', $now, $now]);
+        $stmt->execute([$id, $slug, $name, 'active', $planId, '{}', $now, $now]);
         return $id;
     }
 

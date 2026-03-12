@@ -20,6 +20,6 @@ final class Tenant
 
     public function schemaName(): string
     {
-        return 'tenant_' . str_replace('-', '_', $this->id);
+        return 'tenant_' . str_replace('-', '_', strtolower($this->id));
     }
 }
