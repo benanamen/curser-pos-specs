@@ -20,3 +20,21 @@
   3. **Optional defensive search**:
      - As an extra safeguard, consider normalizing both the stored value and the search query through a common normalization function (e.g. Unicode NFKC + digit mapping) before comparison, while still keeping stored emails canonicalized.
 
+## 2. POS quantity model vs stock-style items
+
+- **Summary**: The current data model for `items` assumes one row per physical item (unique `sku`, no quantity column). This works well for consignment pieces (each is unique) but does not naturally support stock‑style retail items (e.g. 5 identical sodas) on a single cart line with editable quantity.
+- **Scope**:
+  - Database: `items` table has no `quantity` field and enforces a unique `sku`.
+  - POS cart: each cart line currently represents a single `item_id` + quantity, and we constrain quantity to 1 to avoid selling more units than exist for that item.
+- **Impact**:
+  - Retail scenarios (multiple identical units in one sale) either:
+    - Require one cart line per physical unit (visually noisy), or
+    - Need a more sophisticated “stock item” concept that is not yet implemented.
+- **Proposed future enhancement**:
+  - Introduce a **stock/inventory item model** that supports:
+    - A quantity field (on‑hand stock),
+    - Relaxed SKU uniqueness for stock items or a separate stock table keyed by SKU,
+    - POS cart lines that reference a stock item with a multi‑unit quantity, and
+    - Correct decrementation of stock on checkout and reporting.
+  - Keep the existing one‑row‑per‑consignment‑item model for traditional consignment pieces, and make clear in the UI which items are stock vs one‑off consignment.
+
