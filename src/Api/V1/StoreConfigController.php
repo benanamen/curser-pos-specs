@@ -52,6 +52,26 @@ final class StoreConfigController
             return;
         }
         $settings = $tenant->settings;
+        // #region agent log
+        file_put_contents(
+            'debug-a0f689.log',
+            json_encode([
+                'sessionId' => 'a0f689',
+                'runId' => 'pre-fix',
+                'hypothesisId' => 'H_storeHeader',
+                'location' => 'StoreConfigController::publicInfo',
+                'message' => 'Store public info requested',
+                'data' => [
+                    'tenantId' => $tenant->id ?? null,
+                    'store_name' => $tenant->name ?? null,
+                    'has_address' => array_key_exists('store_address', $settings),
+                    'has_phone' => array_key_exists('store_phone', $settings),
+                ],
+                'timestamp' => (int) (microtime(true) * 1000),
+            ]) . PHP_EOL,
+            FILE_APPEND
+        );
+        // #endregion
         $this->json(200, [
             'store_name' => $tenant->name,
             'store_slug' => $tenant->slug,

@@ -13,6 +13,28 @@ class PaymentRepository
     ) {
     }
 
+    /**
+     * @return list<array{id: string, method: string, amount: float, reference: string|null}>
+     */
+    public function getBySaleId(string $saleId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, method, amount, reference FROM payments WHERE sale_id = ? AND amount > 0 ORDER BY created_at'
+        );
+        $stmt->execute([$saleId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'id' => (string) $row['id'],
+                'method' => (string) $row['method'],
+                'amount' => (float) $row['amount'],
+                'reference' => isset($row['reference']) && $row['reference'] !== '' && $row['reference'] !== null ? (string) $row['reference'] : null,
+            ];
+        }
+        return $out;
+    }
+
     public function addPayment(string $saleId, string $method, float $amount, ?string $reference = null, ?string $refundOfId = null): string
     {
         $id = $this->generateUuid();

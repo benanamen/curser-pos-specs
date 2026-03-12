@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CurserPos\Api\V1;
 
 use CurserPos\Domain\Sale\SaleRepository;
+use CurserPos\Domain\Sale\PaymentRepository;
 use CurserPos\Http\RequestContextHolder;
 use CurserPos\Service\PosService;
 use PerfectApp\Routing\Route;
@@ -14,6 +15,7 @@ final class PosController
     public function __construct(
         private readonly PosService $posService,
         private readonly SaleRepository $saleRepository,
+        private readonly PaymentRepository $paymentRepository,
         private readonly \CurserPos\Service\AuditService $auditService
     ) {
     }
@@ -204,6 +206,8 @@ final class PosController
             $this->json(404, ['error' => 'Sale not found']);
             return;
         }
+        $items = $this->saleRepository->getSaleItems($id);
+        $payments = $this->paymentRepository->getBySaleId($id);
         $this->json(200, [
             'id' => $sale->id,
             'sale_number' => $sale->saleNumber,
@@ -213,6 +217,8 @@ final class PosController
             'total' => $sale->total,
             'status' => $sale->status,
             'created_at' => $sale->createdAt->format(\DateTimeInterface::ATOM),
+            'items' => $items,
+            'payments' => $payments,
         ]);
     }
 

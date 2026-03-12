@@ -45,6 +45,21 @@ class HeldSaleRepository
         foreach ($rows as &$row) {
             $row['cart_data'] = is_string($row['cart_data']) ? json_decode($row['cart_data'], true) : $row['cart_data'];
         }
+        // #region agent log
+        file_put_contents(
+            'debug-a0f689.log',
+            json_encode([
+                'sessionId' => 'a0f689',
+                'runId' => 'pre-fix',
+                'hypothesisId' => 'H_listHeld',
+                'location' => 'HeldSaleRepository::listByUser',
+                'message' => 'Listing held sales',
+                'data' => ['userId' => $userId, 'limit' => $limit, 'count' => count($rows)],
+                'timestamp' => (int) (microtime(true) * 1000),
+            ]) . PHP_EOL,
+            FILE_APPEND
+        );
+        // #endregion
         return $rows;
     }
 

@@ -320,6 +320,21 @@ final class PosService
             throw new \InvalidArgumentException('Held sale does not belong to current user');
         }
         $itemIds = $this->itemHoldRepository->listItemIdsByHold($heldId);
+        // #region agent log
+        file_put_contents(
+            'debug-a0f689.log',
+            json_encode([
+                'sessionId' => 'a0f689',
+                'runId' => 'pre-fix',
+                'hypothesisId' => 'H_release',
+                'location' => 'PosService::releaseHold',
+                'message' => 'Releasing held sale',
+                'data' => ['heldId' => $heldId, 'userId' => $userId, 'itemIds' => $itemIds],
+                'timestamp' => (int) (microtime(true) * 1000),
+            ]) . PHP_EOL,
+            FILE_APPEND
+        );
+        // #endregion
         $this->pdo->beginTransaction();
         try {
             if ($itemIds !== []) {
