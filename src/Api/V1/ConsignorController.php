@@ -74,6 +74,7 @@ final class ConsignorController
             $this->json(400, ['error' => 'Name is required']);
             return;
         }
+        $customId = isset($input['custom_id']) && $input['custom_id'] !== '' ? (string) $input['custom_id'] : null;
         $email = isset($input['email']) && $input['email'] !== '' ? (string) $input['email'] : null;
         $phone = isset($input['phone']) && $input['phone'] !== '' ? (string) $input['phone'] : null;
         $address = isset($input['address']) && $input['address'] !== '' ? (string) $input['address'] : null;
@@ -84,7 +85,7 @@ final class ConsignorController
         $notes = isset($input['notes']) && $input['notes'] !== '' ? (string) $input['notes'] : null;
 
         try {
-            $consignor = $this->consignorService->createConsignor($slugInput, $name, $email, $phone, $address, $commission, $agreementSignedAt, $notes);
+            $consignor = $this->consignorService->createConsignor($slugInput, $name, $customId, $email, $phone, $address, $commission, $agreementSignedAt, $notes);
             $this->json(201, $this->consignorToArray($consignor));
         } catch (\InvalidArgumentException $e) {
             $this->json(400, ['error' => $e->getMessage()]);
@@ -118,6 +119,9 @@ final class ConsignorController
         $input = $this->getJsonInput();
         $slugInput = $input['slug'] ?? $consignor->slug;
         $name = $input['name'] ?? $consignor->name;
+        $customId = array_key_exists('custom_id', $input)
+            ? ($input['custom_id'] !== '' ? (string) $input['custom_id'] : null)
+            : $consignor->customId;
         $email = array_key_exists('email', $input) ? ($input['email'] !== '' ? (string) $input['email'] : null) : $consignor->email;
         $phone = array_key_exists('phone', $input) ? ($input['phone'] !== '' ? (string) $input['phone'] : null) : $consignor->phone;
         $address = array_key_exists('address', $input) ? ($input['address'] !== '' ? (string) $input['address'] : null) : $consignor->address;
@@ -128,7 +132,7 @@ final class ConsignorController
         $notes = array_key_exists('notes', $input) ? ($input['notes'] !== '' ? (string) $input['notes'] : null) : $consignor->notes;
 
         try {
-            $updated = $this->consignorService->updateConsignor($id, $slugInput, $name, $email, $phone, $address, $commission, $agreementSignedAt, $notes);
+            $updated = $this->consignorService->updateConsignor($id, $slugInput, $name, $customId, $email, $phone, $address, $commission, $agreementSignedAt, $notes);
             $this->json(200, $this->consignorToArray($updated));
         } catch (\InvalidArgumentException $e) {
             $this->json(400, ['error' => $e->getMessage()]);
@@ -287,6 +291,7 @@ final class ConsignorController
         return [
             'id' => $consignor->id,
             'slug' => $consignor->slug,
+            'custom_id' => $consignor->customId,
             'name' => $consignor->name,
             'email' => $consignor->email,
             'phone' => $consignor->phone,

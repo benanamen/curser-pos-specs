@@ -48,6 +48,15 @@ final class ReportController
         $this->json(200, $data);
     }
 
+    #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/reports/payouts/detail', ['GET'])]
+    public function payoutsDetail(string $slug): void
+    {
+        $dateFrom = isset($_GET['from']) ? (string) $_GET['from'] : null;
+        $dateTo = isset($_GET['to']) ? (string) $_GET['to'] : null;
+        $data = $this->reportService->payoutsDetail($dateFrom, $dateTo);
+        $this->json(200, $data);
+    }
+
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/reports/sales/export', ['GET'])]
     public function exportSalesCsv(string $slug): void
     {

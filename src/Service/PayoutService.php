@@ -77,4 +77,36 @@ final class PayoutService
 
         return $results;
     }
+
+    /**
+     * Preview which consignors would be paid in a payout run without creating payouts.
+     *
+     * @return list<array{consignor_id: string, name: string, balance: float, rent_due: float, payout_amount: float}>
+     */
+    public function previewPayoutRun(float $minimumAmount): array
+    {
+        $consignors = $this->consignorRepository->findAll('active');
+        $results = [];
+
+        foreach ($consignors as $consignor) {
+            $balance = $this->consignorService->getBalance($consignor->id);
+            $rentDue = $this->boothRentalService->getRentDue($consignor->id);
+            $rentAmount = $rentDue !== null ? $rentDue['amount'] : 0.0;
+            $payoutAmount = round($balance->balance - $rentAmount, 2);
+
+            if ($payoutAmount < $minimumAmount) {
+                continue;
+            }
+
+            $results[] = [
+                'consignor_id' => $consignor->id,
+                'name' => $consignor->name,
+                'balance' => $balance->balance,
+                'rent_due' => $rentAmount,
+                'payout_amount' => $payoutAmount,
+            ];
+        }
+
+        return $results;
+    }
 }

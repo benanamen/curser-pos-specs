@@ -84,6 +84,9 @@ final class PosService
             if ($itemId === '' || $quantity < 1) {
                 continue;
             }
+            if ($quantity > 1) {
+                throw new \InvalidArgumentException('Quantity for an item cannot exceed available inventory');
+            }
             if ($lineDiscount < 0) {
                 throw new \InvalidArgumentException('Item discount cannot be negative');
             }

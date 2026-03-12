@@ -30,7 +30,7 @@ final class PayoutServiceTest extends TestCase
 
     public function testRunPayoutRunSkipsWhenBelowMinimum(): void
     {
-        $consignor = new Consignor('c1', 's1', 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
+        $consignor = new Consignor('c1', 's1', null, 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
         $balance = new ConsignorBalance('c1', 5.0, 0.0, 0.0, new \DateTimeImmutable());
 
         $consignorRepo = $this->createMock(ConsignorRepository::class);
@@ -48,7 +48,7 @@ final class PayoutServiceTest extends TestCase
 
     public function testRunPayoutRunPaysWhenNoRent(): void
     {
-        $consignor = new Consignor('c1', 's1', 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
+        $consignor = new Consignor('c1', 's1', null, 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
         $balance = new ConsignorBalance('c1', 100.0, 0.0, 0.0, new \DateTimeImmutable());
 
         $consignorRepo = $this->createMock(ConsignorRepository::class);
@@ -71,7 +71,7 @@ final class PayoutServiceTest extends TestCase
 
     public function testRunPayoutRunUsesDefaultMethodWhenInvalid(): void
     {
-        $consignor = new Consignor('c1', 's1', 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
+        $consignor = new Consignor('c1', 's1', null, 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
         $balance = new ConsignorBalance('c1', 100.0, 0.0, 0.0, new \DateTimeImmutable());
 
         $consignorRepo = $this->createMock(ConsignorRepository::class);

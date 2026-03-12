@@ -9,6 +9,7 @@ final class Consignor
     public function __construct(
         public readonly string $id,
         public readonly string $slug,
+        public readonly ?string $customId,
         public readonly string $name,
         public readonly ?string $email,
         public readonly ?string $phone,

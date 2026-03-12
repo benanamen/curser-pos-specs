@@ -43,6 +43,14 @@ final class PayoutController
         $this->json(200, ['payouts' => $results]);
     }
 
+    #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/payouts/preview', ['GET'])]
+    public function preview(string $slug): void
+    {
+        $minimumAmount = isset($_GET['minimum_amount']) ? (float) $_GET['minimum_amount'] : 0.0;
+        $rows = $this->payoutService->previewPayoutRun($minimumAmount);
+        $this->json(200, ['preview' => $rows]);
+    }
+
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/consignors/([0-9a-fA-F-]{36})/payouts', ['GET'])]
     public function listByConsignor(string $slug, string $consignorId): void
     {

@@ -80,6 +80,12 @@ final class RegisterController
             $this->json(404, ['error' => 'Register not found']);
             return;
         }
+        $stmt = $this->pdo->query('SELECT COUNT(*) FROM held_sales');
+        $heldCount = (int) $stmt->fetchColumn();
+        if ($heldCount > 0) {
+            $this->json(400, ['error' => 'Cannot close register while there are held sales']);
+            return;
+        }
         $this->registerRepository->close($id, $closingCash);
         $updated = $this->registerRepository->findById($id);
         $this->json(200, $updated !== null ? ['status' => $updated->status, 'closed_at' => $updated->closedAt?->format(\DateTimeInterface::ATOM)] : []);

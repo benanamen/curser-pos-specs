@@ -8,6 +8,7 @@ use CurserPos\Domain\Item\Item;
 use CurserPos\Domain\Item\ItemRepository;
 use CurserPos\Domain\Sale\GiftCardRepository;
 use CurserPos\Domain\Sale\HeldSaleRepository;
+use CurserPos\Domain\Sale\ItemHoldRepository;
 use CurserPos\Domain\Sale\PaymentRepository;
 use CurserPos\Domain\Sale\Sale;
 use CurserPos\Domain\Sale\SaleRepository;
@@ -58,16 +59,19 @@ final class PosServiceTest extends TestCase
 
     public function testCheckoutThrowsWhenCartEmpty(): void
     {
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->exec('CREATE TABLE item_holds (item_id TEXT, held_id TEXT, user_id TEXT, created_at TEXT)');
         $saleRepo = $this->createMock(SaleRepository::class);
         $paymentRepo = $this->createMock(PaymentRepository::class);
         $itemRepo = $this->createMock(ItemRepository::class);
         $consignorService = $this->createMock(ConsignorService::class);
         $processor = $this->createMock(PaymentProcessorInterface::class);
         $heldRepo = $this->createMock(HeldSaleRepository::class);
+        $itemHoldRepo = new ItemHoldRepository($pdo);
         $storeCreditRepo = $this->createMock(StoreCreditRepository::class);
         $giftCardRepo = $this->createMock(GiftCardRepository::class);
 
-        $service = new PosService($saleRepo, $paymentRepo, $itemRepo, $consignorService, $processor, $heldRepo, $storeCreditRepo, $giftCardRepo);
+        $service = new PosService($pdo, $saleRepo, $paymentRepo, $itemRepo, $consignorService, $processor, $heldRepo, $itemHoldRepo, $storeCreditRepo, $giftCardRepo);
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Cart cannot be empty');
         $service->checkout('user-1', null, null, [], []);
@@ -293,10 +297,14 @@ final class PosServiceTest extends TestCase
 
     public function testHoldCartSuccess(): void
     {
+        $item = $this->createItem(id: 'i1');
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->method('findById')->with('i1')->willReturn($item);
+
         $heldRepo = $this->createMock(HeldSaleRepository::class);
         $heldRepo->method('create')->willReturn('held-1');
 
-        $service = $this->createPosService(['heldSaleRepository' => $heldRepo]);
+        $service = $this->createPosService(['heldSaleRepository' => $heldRepo, 'itemRepository' => $itemRepo]);
         $result = $service->holdCart('user-1', [['item_id' => 'i1', 'quantity' => 1]], [['method' => 'cash', 'amount' => 10.0]]);
         $this->assertSame('held-1', $result);
     }
@@ -615,15 +623,18 @@ final class PosServiceTest extends TestCase
      */
     private function createPosService(array $overrides = []): PosService
     {
+        $pdo = $overrides['pdo'] ?? new \PDO('sqlite::memory:');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS item_holds (item_id TEXT, held_id TEXT, user_id TEXT, created_at TEXT)');
         $saleRepo = $overrides['saleRepository'] ?? $this->createMock(SaleRepository::class);
         $paymentRepo = $overrides['paymentRepository'] ?? $this->createMock(PaymentRepository::class);
         $itemRepo = $overrides['itemRepository'] ?? $this->createMock(ItemRepository::class);
         $consignorService = $overrides['consignorService'] ?? $this->createMock(ConsignorService::class);
         $processor = $overrides['paymentProcessor'] ?? $this->createMock(PaymentProcessorInterface::class);
         $heldRepo = $overrides['heldSaleRepository'] ?? $this->createMock(HeldSaleRepository::class);
+        $itemHoldRepo = $overrides['itemHoldRepository'] ?? new ItemHoldRepository($pdo);
         $storeCreditRepo = $overrides['storeCreditRepository'] ?? $this->createMock(StoreCreditRepository::class);
         $giftCardRepo = $overrides['giftCardRepository'] ?? $this->createMock(GiftCardRepository::class);
 
-        return new PosService($saleRepo, $paymentRepo, $itemRepo, $consignorService, $processor, $heldRepo, $storeCreditRepo, $giftCardRepo);
+        return new PosService($pdo, $saleRepo, $paymentRepo, $itemRepo, $consignorService, $processor, $heldRepo, $itemHoldRepo, $storeCreditRepo, $giftCardRepo);
     }
 }

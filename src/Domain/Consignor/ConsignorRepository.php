@@ -16,7 +16,7 @@ class ConsignorRepository
     public function findById(string $id): ?Consignor
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, slug, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE id = ?'
+            'SELECT id, slug, custom_id, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE id = ?'
         );
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -26,7 +26,7 @@ class ConsignorRepository
     public function findBySlug(string $slug): ?Consignor
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, slug, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE slug = ?'
+            'SELECT id, slug, custom_id, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE slug = ?'
         );
         $stmt->execute([$slug]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -36,7 +36,7 @@ class ConsignorRepository
     public function findByPortalToken(string $token): ?Consignor
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, slug, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE portal_token = ? AND status = ?'
+            'SELECT id, slug, custom_id, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE portal_token = ? AND status = ?'
         );
         $stmt->execute([$token, 'active']);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -62,7 +62,7 @@ class ConsignorRepository
     public function findAll(string $status = 'active'): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, slug, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE status = ? ORDER BY name'
+            'SELECT id, slug, custom_id, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at FROM consignors WHERE status = ? ORDER BY name'
         );
         $stmt->execute([$status]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -100,6 +100,7 @@ class ConsignorRepository
     public function create(
         string $slug,
         string $name,
+        ?string $customId = null,
         ?string $email = null,
         ?string $phone = null,
         ?string $address = null,
@@ -112,10 +113,10 @@ class ConsignorRepository
         $agreementDate = $agreementSignedAt?->format('Y-m-d');
 
         $stmt = $this->pdo->prepare(
-            'INSERT INTO consignors (id, slug, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?)'
+            'INSERT INTO consignors (id, slug, custom_id, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?)'
         );
-        $stmt->execute([$id, $slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementDate, 'active', $notes, $now, $now]);
+        $stmt->execute([$id, $slug, $customId, $name, $email, $phone, $address, $defaultCommissionPct, $agreementDate, 'active', $notes, $now, $now]);
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO consignor_balances (id, consignor_id, balance, pending_sales, paid_out, updated_at) VALUES (?, ?, 0, 0, 0, ?)'
@@ -129,6 +130,7 @@ class ConsignorRepository
         string $id,
         string $slug,
         string $name,
+        ?string $customId,
         ?string $email,
         ?string $phone,
         ?string $address,
@@ -140,9 +142,9 @@ class ConsignorRepository
         $agreementDate = $agreementSignedAt?->format('Y-m-d');
 
         $stmt = $this->pdo->prepare(
-            'UPDATE consignors SET slug = ?, name = ?, email = ?, phone = ?, address = ?, default_commission_pct = ?, agreement_signed_at = ?::date, notes = ?, updated_at = ? WHERE id = ?'
+            'UPDATE consignors SET slug = ?, name = ?, custom_id = ?, email = ?, phone = ?, address = ?, default_commission_pct = ?, agreement_signed_at = ?::date, notes = ?, updated_at = ? WHERE id = ?'
         );
-        $stmt->execute([$slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementDate, $notes, $now, $id]);
+        $stmt->execute([$slug, $name, $customId, $email, $phone, $address, $defaultCommissionPct, $agreementDate, $notes, $now, $id]);
     }
 
     public function updateStatus(string $id, string $status): void
@@ -183,6 +185,7 @@ class ConsignorRepository
         return new Consignor(
             (string) $row['id'],
             (string) $row['slug'],
+            isset($row['custom_id']) && $row['custom_id'] !== '' ? (string) $row['custom_id'] : null,
             (string) $row['name'],
             isset($row['email']) && $row['email'] !== '' ? (string) $row['email'] : null,
             isset($row['phone']) && $row['phone'] !== '' ? (string) $row['phone'] : null,

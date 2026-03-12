@@ -28,6 +28,7 @@ final class ConsignorServiceTest extends TestCase
         $consignor = new Consignor(
             'c1',
             'slug1',
+            null,
             'Name',
             null,
             null,
@@ -56,19 +57,19 @@ final class ConsignorServiceTest extends TestCase
 
         $service = new ConsignorService($repo);
         $this->expectException(\InvalidArgumentException::class);
-        $service->updateConsignor('c1', 'taken', 'Name', null, null, null, 50.0, null, null);
+        $service->updateConsignor('c1', 'taken', 'Name', null, null, null, null, 50.0, null, null);
     }
 
     public function testUpdateConsignorSuccess(): void
     {
-        $consignor = new Consignor('c1', 'slug1', 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
+        $consignor = new Consignor('c1', 'slug1', null, 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
         $repo = $this->createMock(ConsignorRepository::class);
         $repo->method('slugExists')->willReturn(false);
         $repo->method('update');
         $repo->method('findById')->willReturn($consignor);
 
         $service = new ConsignorService($repo);
-        $result = $service->updateConsignor('c1', 'slug1', 'Name', null, null, null, 50.0, null, null);
+        $result = $service->updateConsignor('c1', 'slug1', 'Name', null, null, null, null, 50.0, null, null);
         $this->assertSame('c1', $result->id);
     }
 
@@ -137,7 +138,7 @@ final class ConsignorServiceTest extends TestCase
 
     public function testBulkImportFromCsvValid(): void
     {
-        $consignor = new Consignor('c1', 'john', 'John', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
+        $consignor = new Consignor('c1', 'john', null, 'John', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
         $repo = $this->createMock(ConsignorRepository::class);
         $repo->method('slugExists')->willReturn(false);
         $repo->method('create')->willReturn('c1');

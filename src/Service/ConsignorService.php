@@ -18,6 +18,7 @@ class ConsignorService
     public function createConsignor(
         string $slug,
         string $name,
+        ?string $customId = null,
         ?string $email = null,
         ?string $phone = null,
         ?string $address = null,
@@ -26,10 +27,15 @@ class ConsignorService
         ?string $notes = null
     ): Consignor {
         $slug = $this->normalizeSlug($slug);
+        if ($customId !== null && $customId !== '') {
+            $customId = $this->normalizeCustomId($customId);
+        } else {
+            $customId = null;
+        }
         if ($this->consignorRepository->slugExists($slug)) {
             throw new \InvalidArgumentException("Consignor slug '{$slug}' already exists");
         }
-        $id = $this->consignorRepository->create($slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementSignedAt, $notes);
+        $id = $this->consignorRepository->create($slug, $name, $customId, $email, $phone, $address, $defaultCommissionPct, $agreementSignedAt, $notes);
         $consignor = $this->consignorRepository->findById($id);
         if ($consignor === null) {
             throw new \RuntimeException('Failed to create consignor');
@@ -41,6 +47,7 @@ class ConsignorService
         string $id,
         string $slug,
         string $name,
+        ?string $customId,
         ?string $email,
         ?string $phone,
         ?string $address,
@@ -49,10 +56,15 @@ class ConsignorService
         ?string $notes
     ): Consignor {
         $slug = $this->normalizeSlug($slug);
+        if ($customId !== null && $customId !== '') {
+            $customId = $this->normalizeCustomId($customId);
+        } else {
+            $customId = null;
+        }
         if ($this->consignorRepository->slugExists($slug, $id)) {
             throw new \InvalidArgumentException("Consignor slug '{$slug}' already exists");
         }
-        $this->consignorRepository->update($id, $slug, $name, $email, $phone, $address, $defaultCommissionPct, $agreementSignedAt, $notes);
+        $this->consignorRepository->update($id, $slug, $name, $customId, $email, $phone, $address, $defaultCommissionPct, $agreementSignedAt, $notes);
         $consignor = $this->consignorRepository->findById($id);
         if ($consignor === null) {
             throw new \RuntimeException('Consignor not found');
@@ -127,12 +139,13 @@ class ConsignorService
                 continue;
             }
             $slug = isset($assoc['slug']) && trim((string) $assoc['slug']) !== '' ? trim((string) $assoc['slug']) : $this->normalizeSlug($name);
+            $customId = isset($assoc['custom_id']) && trim((string) $assoc['custom_id']) !== '' ? trim((string) $assoc['custom_id']) : null;
             $email = isset($assoc['email']) && trim((string) $assoc['email']) !== '' ? trim((string) $assoc['email']) : null;
             $phone = isset($assoc['phone']) && trim((string) $assoc['phone']) !== '' ? trim((string) $assoc['phone']) : null;
             $address = isset($assoc['address']) && trim((string) $assoc['address']) !== '' ? trim((string) $assoc['address']) : null;
             $commission = (float) ($assoc['default_commission_pct'] ?? 50.0);
             try {
-                $consignor = $this->createConsignor($slug, $name, $email, $phone, $address, $commission);
+                $consignor = $this->createConsignor($slug, $name, $customId, $email, $phone, $address, $commission);
                 $created[] = ['id' => $consignor->id, 'slug' => $consignor->slug];
             } catch (\Throwable $e) {
                 $errors[] = ['row' => $rowNum, 'message' => $e->getMessage()];
@@ -146,5 +159,17 @@ class ConsignorService
     {
         $slug = strtolower(preg_replace('/[^a-zA-Z0-9_-]/', '-', $slug));
         return trim($slug, '-') ?: 'consignor-' . substr(uniqid(), -6);
+    }
+
+    private function normalizeCustomId(string $id): string
+    {
+        $id = trim($id);
+        if ($id === '') {
+            throw new \InvalidArgumentException('Custom consignor ID cannot be empty when provided');
+        }
+        if (!preg_match('/^[A-Za-z0-9-]+$/', $id)) {
+            throw new \InvalidArgumentException('Custom consignor ID may only contain letters, numbers, and dashes');
+        }
+        return $id;
     }
 }

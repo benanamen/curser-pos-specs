@@ -91,6 +91,29 @@ class ReportService
     }
 
     /**
+     * Detailed list of processed payouts with consignor info for a date range.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function payoutsDetail(?string $dateFrom = null, ?string $dateTo = null): array
+    {
+        $sql = 'SELECT p.id, p.consignor_id, c.name AS consignor_name, p.amount, p.method, p.status, p.reference, p.method_metadata, p.created_at, p.processed_at FROM payouts p JOIN consignors c ON c.id = p.consignor_id WHERE p.status = ?';
+        $params = ['processed'];
+        if ($dateFrom !== null) {
+            $sql .= ' AND p.processed_at >= ?';
+            $params[] = $dateFrom;
+        }
+        if ($dateTo !== null) {
+            $sql .= ' AND p.processed_at <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
+        $sql .= ' ORDER BY p.processed_at';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Export sales to CSV format (string).
      */
     public function exportSalesCsv(?string $dateFrom = null, ?string $dateTo = null): string
@@ -116,9 +139,9 @@ class ReportService
             return '';
         }
         if ($rows !== []) {
-            fputcsv($out, array_keys($rows[0]));
+            fputcsv($out, array_keys($rows[0]), ',', '"', '\\');
             foreach ($rows as $row) {
-                fputcsv($out, $row);
+                fputcsv($out, $row, ',', '"', '\\');
             }
         }
         rewind($out);
@@ -188,9 +211,9 @@ class ReportService
             return '';
         }
         if ($rows !== []) {
-            fputcsv($out, array_keys($rows[0]));
+            fputcsv($out, array_keys($rows[0]), ',', '"', '\\');
             foreach ($rows as $row) {
-                fputcsv($out, $row);
+                fputcsv($out, $row, ',', '"', '\\');
             }
         }
         rewind($out);
@@ -223,9 +246,9 @@ class ReportService
             return '';
         }
         if ($rows !== []) {
-            fputcsv($out, array_keys($rows[0]));
+            fputcsv($out, array_keys($rows[0]), ',', '"', '\\');
             foreach ($rows as $row) {
-                fputcsv($out, $row);
+                fputcsv($out, $row, ',', '"', '\\');
             }
         }
         rewind($out);

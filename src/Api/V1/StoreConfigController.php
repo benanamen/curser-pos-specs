@@ -29,6 +29,9 @@ final class StoreConfigController
         $settings = $tenant->settings;
         $taxConfig = $settings['tax_config'] ?? [];
         $taxRate = is_array($taxConfig) && isset($taxConfig['rate']) ? (float) $taxConfig['rate'] : 0.0;
+        $taxApplyByDefault = is_array($taxConfig) && array_key_exists('apply_by_default', $taxConfig)
+            ? (bool) $taxConfig['apply_by_default']
+            : true;
         $this->json(200, [
             'store_name' => $tenant->name,
             'store_slug' => $tenant->slug,
@@ -38,6 +41,7 @@ final class StoreConfigController
             'default_commission_pct' => $settings['default_commission_pct'] ?? 50.0,
             'tax_config' => $taxConfig,
             'tax_rate' => $taxRate,
+            'tax_apply_by_default' => $taxApplyByDefault,
             'consignment_terms' => $settings['consignment_terms'] ?? null,
             'expiration_days' => $settings['expiration_days'] ?? 90,
         ]);
@@ -115,6 +119,14 @@ final class StoreConfigController
             $taxConfig['rate'] = (float) $input['tax_rate'];
             $settings['tax_config'] = $taxConfig;
         }
+        if (array_key_exists('tax_apply_by_default', $input)) {
+            $taxConfig = $settings['tax_config'] ?? [];
+            if (!is_array($taxConfig)) {
+                $taxConfig = [];
+            }
+            $taxConfig['apply_by_default'] = (bool) $input['tax_apply_by_default'];
+            $settings['tax_config'] = $taxConfig;
+        }
         if (array_key_exists('consignment_terms', $input)) {
             $settings['consignment_terms'] = $input['consignment_terms'] !== '' ? (string) $input['consignment_terms'] : null;
         }
@@ -139,6 +151,9 @@ final class StoreConfigController
 
         $taxConfig = $settings['tax_config'] ?? [];
         $taxRate = is_array($taxConfig) && isset($taxConfig['rate']) ? (float) $taxConfig['rate'] : 0.0;
+        $taxApplyByDefault = is_array($taxConfig) && array_key_exists('apply_by_default', $taxConfig)
+            ? (bool) $taxConfig['apply_by_default']
+            : true;
         $this->json(200, [
             'store_name' => $tenant->name,
             'store_slug' => $tenant->slug,
@@ -148,6 +163,7 @@ final class StoreConfigController
             'default_commission_pct' => $settings['default_commission_pct'] ?? 50.0,
             'tax_config' => $taxConfig,
             'tax_rate' => $taxRate,
+            'tax_apply_by_default' => $taxApplyByDefault,
             'consignment_terms' => $settings['consignment_terms'] ?? null,
             'expiration_days' => $settings['expiration_days'] ?? 90,
         ]);
