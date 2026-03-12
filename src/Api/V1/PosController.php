@@ -77,8 +77,14 @@ final class PosController
             $this->json(400, ['error' => 'cart and payments must be arrays']);
             return;
         }
-        $heldId = $this->posService->holdCart($user, $cart, $payments);
-        $this->json(201, ['held_id' => $heldId]);
+        try {
+            $heldId = $this->posService->holdCart($user, $cart, $payments);
+            $this->json(201, ['held_id' => $heldId]);
+        } catch (\InvalidArgumentException $e) {
+            $this->json(400, ['error' => $e->getMessage()]);
+        } catch (\RuntimeException $e) {
+            $this->json(400, ['error' => $e->getMessage()]);
+        }
     }
 
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/pos/held', ['GET'])]
@@ -89,7 +95,11 @@ final class PosController
             $this->json(401, ['error' => 'Authentication required']);
             return;
         }
-        $list = $this->posService->listHeld($user);
+        $limit = (int) ($_GET['limit'] ?? 200);
+        if ($limit < 1) {
+            $limit = 200;
+        }
+        $list = $this->posService->listHeld($user, $limit);
         $this->json(200, ['held_sales' => $list]);
     }
 
@@ -107,6 +117,22 @@ final class PosController
             return;
         }
         $this->json(200, $held);
+    }
+
+    #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/pos/held/([0-9a-fA-F-]{36})/release', ['POST'])]
+    public function releaseHeld(string $slug, string $id): void
+    {
+        $user = $this->getCurrentUserId();
+        if ($user === null) {
+            $this->json(401, ['error' => 'Authentication required']);
+            return;
+        }
+        try {
+            $this->posService->releaseHold($id, $user);
+            $this->json(200, ['message' => 'Held sale released', 'held_id' => $id]);
+        } catch (\InvalidArgumentException $e) {
+            $this->json(400, ['error' => $e->getMessage()]);
+        }
     }
 
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/pos/sales', ['GET'])]
@@ -215,6 +241,29 @@ final class PosController
         } catch (\InvalidArgumentException $e) {
             $this->json(400, ['error' => $e->getMessage()]);
         }
+    }
+
+    #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/pos/tax', ['GET'])]
+    public function tax(string $slug): void
+    {
+        $context = RequestContextHolder::get();
+        if ($context?->tenant === null) {
+            $this->json(404, ['error' => 'Tenant not found']);
+            return;
+        }
+        $subtotal = isset($_GET['subtotal']) ? (float) $_GET['subtotal'] : 0.0;
+        $locationId = isset($_GET['location_id']) && $_GET['location_id'] !== '' ? (string) $_GET['location_id'] : null;
+        $taxConfig = $context->tenant->settings['tax_config'] ?? [];
+        $rate = 0.0;
+        if (is_array($taxConfig)) {
+            if ($locationId !== null && isset($taxConfig['locations']) && is_array($taxConfig['locations']) && isset($taxConfig['locations'][$locationId])) {
+                $rate = (float) $taxConfig['locations'][$locationId];
+            } elseif (isset($taxConfig['rate'])) {
+                $rate = (float) $taxConfig['rate'];
+            }
+        }
+        $taxAmount = round($subtotal * $rate, 2);
+        $this->json(200, ['tax_amount' => $taxAmount, 'rate' => $rate]);
     }
 
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/pos/charge-card', ['POST'])]

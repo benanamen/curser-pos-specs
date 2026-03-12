@@ -420,6 +420,7 @@ final class PosServiceTest extends TestCase
         $consignorService->expects($this->once())->method('recordManualAdjustment')->with('cons-1', -12.5, 'Refund sale-1');
 
         $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->method('getBySaleId')->with('sale-1')->willReturn([]);
         $paymentRepo->expects($this->once())->method('addPayment')->with('sale-1', 'refund', -50.0, null);
 
         $service = $this->createPosService([
@@ -443,6 +444,9 @@ final class PosServiceTest extends TestCase
         $saleRepo->method('findById')->willReturn($sale);
         $saleRepo->method('getSaleItems')->willReturn($saleItems);
 
+        $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->method('getBySaleId')->willReturn([]);
+
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->expects($this->never())->method('updateStatus');
 
@@ -451,10 +455,159 @@ final class PosServiceTest extends TestCase
 
         $service = $this->createPosService([
             'saleRepository' => $saleRepo,
+            'paymentRepository' => $paymentRepo,
             'itemRepository' => $itemRepo,
             'consignorService' => $consignorService,
         ]);
         $service->refund('sale-1', 'user-1');
+    }
+
+    public function testCheckoutWithCardChargesProcessorAndStoresReference(): void
+    {
+        $item = $this->createItem(price: 30.0);
+        $sale = $this->createSale(total: 30.0);
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_SOLD);
+
+        $saleRepo = $this->createMock(SaleRepository::class);
+        $saleRepo->method('create')->willReturn('sale-1');
+        $saleRepo->method('findById')->willReturn($sale);
+        $saleRepo->expects($this->once())->method('addSaleItem')->with(
+            'sale-1',
+            'item-1',
+            'cons-1',
+            1,
+            30.0,
+            0,
+            0,
+            15.0,
+            15.0
+        );
+
+        $processor = $this->createMock(PaymentProcessorInterface::class);
+        $processor->expects($this->once())->method('charge')->with(3000, 'pm_abc', 'POS sale')->willReturn('ch_xyz');
+
+        $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->expects($this->once())->method('addPayment')->with('sale-1', 'card', 30.0, 'ch_xyz');
+
+        $consignorService = $this->createMock(ConsignorService::class);
+        $consignorService->expects($this->once())->method('recordManualAdjustment')->with('cons-1', 15.0, 'Sale sale-1');
+
+        $service = $this->createPosService([
+            'saleRepository' => $saleRepo,
+            'paymentRepository' => $paymentRepo,
+            'itemRepository' => $itemRepo,
+            'consignorService' => $consignorService,
+            'paymentProcessor' => $processor,
+        ]);
+        $payments = [['method' => 'card', 'amount' => 30.0, 'payment_method_id' => 'pm_abc']];
+        $result = $service->checkout('user-1', null, null, [['item_id' => 'item-1', 'quantity' => 1]], $payments);
+        $this->assertSame('sale-1', $result['sale_id']);
+    }
+
+    public function testCheckoutThrowsWhenCardPaymentMissingPaymentMethodId(): void
+    {
+        $item = $this->createItem();
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->method('findById')->willReturn($item);
+
+        $service = $this->createPosService(['itemRepository' => $itemRepo]);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Card payment requires payment_method_id');
+        $service->checkout('user-1', null, null, [['item_id' => 'item-1', 'quantity' => 1]], [['method' => 'card', 'amount' => 25.0]]);
+    }
+
+    public function testRefundReversesCardCharges(): void
+    {
+        $sale = $this->createSale(total: 50.0);
+        $saleItems = [
+            ['item_id' => 'item-1', 'consignor_id' => 'cons-1', 'consignor_share' => 25.0],
+        ];
+        $salePayments = [
+            ['id' => 'pay-1', 'method' => 'card', 'amount' => 50.0, 'reference' => 'ch_xyz'],
+        ];
+        $saleRepo = $this->createMock(SaleRepository::class);
+        $saleRepo->method('findById')->willReturn($sale);
+        $saleRepo->method('getSaleItems')->willReturn($saleItems);
+        $saleRepo->expects($this->once())->method('markRefunded')->with('sale-1');
+
+        $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->method('getBySaleId')->with('sale-1')->willReturn($salePayments);
+        $paymentRepo->expects($this->once())->method('addPayment')->with('sale-1', 'refund', -50.0, null);
+
+        $processor = $this->createMock(PaymentProcessorInterface::class);
+        $processor->expects($this->once())->method('refund')->with('ch_xyz', null)->willReturn('re_1');
+
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_AVAILABLE);
+
+        $consignorService = $this->createMock(ConsignorService::class);
+        $consignorService->expects($this->once())->method('recordManualAdjustment')->with('cons-1', -25.0, 'Refund sale-1');
+
+        $service = $this->createPosService([
+            'saleRepository' => $saleRepo,
+            'paymentRepository' => $paymentRepo,
+            'paymentProcessor' => $processor,
+            'itemRepository' => $itemRepo,
+            'consignorService' => $consignorService,
+        ]);
+        $result = $service->refund('sale-1', 'user-1');
+        $this->assertSame(50.0, $result['refunded_amount']);
+    }
+
+    public function testCheckoutWithItemLevelDiscount(): void
+    {
+        $item = $this->createItem(price: 40.0);
+        $sale = $this->createSale(total: 35.0);
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_SOLD);
+
+        $saleRepo = $this->createMock(SaleRepository::class);
+        $saleRepo->method('create')->willReturn('sale-1');
+        $saleRepo->method('findById')->willReturn($sale);
+        $saleRepo->expects($this->once())->method('addSaleItem')->with(
+            'sale-1',
+            'item-1',
+            'cons-1',
+            1,
+            40.0,
+            5.0,
+            0,
+            17.5,
+            17.5
+        );
+
+        $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->expects($this->once())->method('addPayment')->with('sale-1', 'cash', 35.0, null);
+
+        $consignorService = $this->createMock(ConsignorService::class);
+        $consignorService->expects($this->once())->method('recordManualAdjustment')->with('cons-1', 17.5, 'Sale sale-1');
+
+        $service = $this->createPosService([
+            'saleRepository' => $saleRepo,
+            'paymentRepository' => $paymentRepo,
+            'itemRepository' => $itemRepo,
+            'consignorService' => $consignorService,
+        ]);
+        $cart = [['item_id' => 'item-1', 'quantity' => 1, 'discount_amount' => 5.0]];
+        $result = $service->checkout('user-1', null, null, $cart, [['method' => 'cash', 'amount' => 35.0]]);
+        $this->assertSame('sale-1', $result['sale_id']);
+        $this->assertSame(35.0, $result['subtotal']);
+        $this->assertSame(35.0, $result['total']);
+    }
+
+    public function testCheckoutThrowsWhenItemDiscountExceedsLineTotal(): void
+    {
+        $item = $this->createItem(price: 10.0);
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->method('findById')->willReturn($item);
+
+        $service = $this->createPosService(['itemRepository' => $itemRepo]);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Item discount for SKU001 exceeds line total');
+        $service->checkout('user-1', null, null, [['item_id' => 'item-1', 'quantity' => 1, 'discount_amount' => 15.0]], [['method' => 'cash', 'amount' => 0.0]]);
     }
 
     /**

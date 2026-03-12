@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace CurserPos\Api\V1;
 
 use CurserPos\Domain\Booth\BoothRepository;
+use CurserPos\Domain\Booth\ConsignorBoothAssignmentRepository;
 use PerfectApp\Routing\Route;
 
 final class BoothController
 {
     public function __construct(
-        private readonly BoothRepository $boothRepository
+        private readonly BoothRepository $boothRepository,
+        private readonly ConsignorBoothAssignmentRepository $assignmentRepository
     ) {
     }
 
@@ -18,8 +20,20 @@ final class BoothController
     public function list(string $slug): void
     {
         $status = $_GET['status'] ?? 'active';
+        $includeAssignmentStatus = isset($_GET['include_assignment_status']) && (string) $_GET['include_assignment_status'] !== '' && (string) $_GET['include_assignment_status'] !== '0';
         $booths = $this->boothRepository->findAll($status);
-        $this->json(200, array_map(fn ($b) => $this->boothToArray($b), $booths));
+        if (!$includeAssignmentStatus) {
+            $this->json(200, array_map(fn ($b) => $this->boothToArray($b), $booths));
+            return;
+        }
+        $out = [];
+        foreach ($booths as $booth) {
+            $activeAssignments = $this->assignmentRepository->getActiveByBoothId($booth->id);
+            $arr = $this->boothToArray($booth);
+            $arr['is_assigned'] = $activeAssignments !== [];
+            $out[] = $arr;
+        }
+        $this->json(200, $out);
     }
 
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/booths/([0-9a-fA-F-]{36})', ['GET'])]

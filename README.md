@@ -99,7 +99,8 @@ Multi-tenant SaaS POS system for consignment stores. Phase 1 MVP + Phase 2 (Comp
 ### POS
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/t/{slug}/api/v1/pos/checkout` | Complete sale (cart + payments). Body: `cart`, `payments`, optional `held_id`, `tax_exempt`, `discount_amount`, `tax_amount`. Payments may include `method: "store_credit"` with `store_credit_id`, or `method: "gift_card"` with `gift_card_id`. |
+| GET | `/t/{slug}/api/v1/pos/tax?subtotal=&location_id=` | Get tax amount for subtotal (and optional location). Returns `tax_amount`, `rate` from store config. |
+| POST | `/t/{slug}/api/v1/pos/checkout` | Complete sale (cart + payments). Body: `cart` (each entry may have `discount_amount`), `payments`, optional `held_id`, `register_id`, `location_id`, `tax_exempt`, `discount_amount`, `tax_amount`. Card payments require `payment_method_id`; store credit/gift card require IDs. |
 | POST | `/t/{slug}/api/v1/pos/hold` | Hold current cart (body: `cart`, `payments`) |
 | GET | `/t/{slug}/api/v1/pos/held` | List current user's held sales |
 | GET | `/t/{slug}/api/v1/pos/held/{id}` | Get held sale by id |

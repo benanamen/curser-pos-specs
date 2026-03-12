@@ -7,6 +7,7 @@ namespace CurserPos\Domain\Item;
 final class Item
 {
     public const STATUS_AVAILABLE = 'available';
+    public const STATUS_HELD = 'held';
     public const STATUS_SOLD = 'sold';
     public const STATUS_RETURNED = 'returned';
     public const STATUS_EXPIRED = 'expired';

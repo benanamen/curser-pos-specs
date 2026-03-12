@@ -37,7 +37,7 @@ class HeldSaleRepository
     /**
      * @return list<array<string, mixed>>
      */
-    public function listByUser(string $userId, int $limit = 20): array
+    public function listByUser(string $userId, int $limit = 200): array
     {
         $stmt = $this->pdo->prepare('SELECT id, cart_data, user_id, created_at FROM held_sales WHERE user_id = ? ORDER BY created_at DESC LIMIT ?');
         $stmt->execute([$userId, $limit]);

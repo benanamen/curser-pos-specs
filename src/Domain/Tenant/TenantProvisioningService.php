@@ -102,6 +102,8 @@ class TenantProvisioningService
         $schemaName = 'tenant_' . str_replace('-', '_', $tenantId);
         $this->pdo->exec("SET search_path TO \"{$schemaName}\", public");
 
+        $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+
         $locationId = $this->generateUuid();
         $stmt = $this->pdo->prepare(
             'INSERT INTO locations (id, name, address, tax_rates) VALUES (?, ?, ?, ?)'
@@ -112,6 +114,31 @@ class TenantProvisioningService
             'INSERT INTO categories (id, name, sort_order, tax_exempt) VALUES (?, ?, ?, ?)'
         );
         $stmt->execute([$this->generateUuid(), 'General', 0, 'f']);
+
+        $baseSlug = 'store';
+        $slug = $baseSlug;
+        $suffix = 1;
+        while (true) {
+            $check = $this->pdo->prepare('SELECT 1 FROM consignors WHERE slug = ?');
+            $check->execute([$slug]);
+            if ($check->fetchColumn() === false) {
+                break;
+            }
+            $suffix++;
+            $slug = $baseSlug . '-' . $suffix;
+        }
+
+        $storeConsignorId = $this->generateUuid();
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO consignors (id, slug, name, email, phone, address, default_commission_pct, agreement_signed_at, status, notes, created_at, updated_at)
+             VALUES (?, ?, ?, NULL, NULL, NULL, ?, NULL, ?, NULL, ?, ?)'
+        );
+        $stmt->execute([$storeConsignorId, $slug, 'Store', 0.0, 'active', $now, $now]);
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO consignor_balances (id, consignor_id, balance, pending_sales, paid_out, updated_at) VALUES (?, ?, 0, 0, 0, ?)'
+        );
+        $stmt->execute([$this->generateUuid(), $storeConsignorId, $now]);
 
         $this->pdo->exec('SET search_path TO public');
     }
