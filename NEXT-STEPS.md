@@ -6,7 +6,7 @@
 
 ## Project Summary
 
-Multi-tenant SaaS POS for consignment stores. PHP 8.4, PostgreSQL, schema-per-tenant. API-first with session auth.
+Multi-tenant SaaS POS for consignment stores. PHP 8.4, PostgreSQL, schema-per-tenant. API-first with session auth, plus store-facing Web UI and SaaS admin UI consuming this API.
 
 **Repo:** https://github.com/benanamen/curser-pos-specs (private)
 
@@ -42,7 +42,7 @@ Multi-tenant SaaS POS for consignment stores. PHP 8.4, PostgreSQL, schema-per-te
 
 7. **Integration tests** — Expand beyond `HealthEndpointTest`; add tests for auth flow, POS checkout, etc. (may need test DB or mocks.)
 
-8. **Frontend** — No UI yet; API is ready. Build web or mobile client.
+8. **Frontend** — Store Web UI and SaaS Admin are now wired to this API. Next steps are deeper UX polish, onboarding flows, and admin tooling rather than initial scaffolding.
 
 9. **FEATURE-LIST.md** — Review remaining P1/P2 items (partial refunds, promos, layaway, 2FA, etc.).
 

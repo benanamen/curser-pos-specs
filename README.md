@@ -1,4 +1,4 @@
-# Curser POS - Consignment Store Point of Sale
+# Perfect Consign API (Curser POS specs)
 
 Multi-tenant SaaS POS system for consignment stores. Phase 1 MVP + Phase 2 (Competitive Parity) features.
 
