@@ -109,6 +109,19 @@ class ConsignorService
     }
 
     /**
+     * Deduct rent only from balance without increasing paid_out (rent is kept entirely by the store).
+     */
+    public function deductRentOnly(string $consignorId, float $rentAmount): void
+    {
+        if ($rentAmount <= 0) {
+            return;
+        }
+        $balance = $this->getBalance($consignorId);
+        $newBalance = $balance->balance - $rentAmount;
+        $this->consignorRepository->updateBalance($consignorId, $newBalance, $balance->pendingSales, $balance->paidOut);
+    }
+
+    /**
      * Bulk import consignors from CSV. Header row required. Columns: slug, name, email, phone, address, default_commission_pct
      *
      * @return array{created: list<array{id: string, slug: string}>, errors: list<array{row: int, message: string}>}

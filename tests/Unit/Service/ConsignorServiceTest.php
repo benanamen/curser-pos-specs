@@ -127,6 +127,29 @@ final class ConsignorServiceTest extends TestCase
         $service->deductForPayoutAndRent('c1', 50.0, 10.0);
     }
 
+    public function testDeductRentOnlySkipsWhenZeroOrNegative(): void
+    {
+        $balance = new ConsignorBalance('c1', 100.0, 0.0, 10.0, new \DateTimeImmutable());
+        $repo = $this->createMock(ConsignorRepository::class);
+        $repo->method('getBalance')->willReturn($balance);
+        $repo->expects($this->never())->method('updateBalance');
+
+        $service = new ConsignorService($repo);
+        $service->deductRentOnly('c1', 0.0);
+        $service->deductRentOnly('c1', -5.0);
+    }
+
+    public function testDeductRentOnlyReducesBalanceWithoutChangingPaidOut(): void
+    {
+        $balance = new ConsignorBalance('c1', 100.0, 0.0, 10.0, new \DateTimeImmutable());
+        $repo = $this->createMock(ConsignorRepository::class);
+        $repo->method('getBalance')->willReturn($balance);
+        $repo->expects($this->once())->method('updateBalance')->with('c1', 60.0, 0.0, 10.0);
+
+        $service = new ConsignorService($repo);
+        $service->deductRentOnly('c1', 40.0);
+    }
+
     public function testBulkImportFromCsvEmpty(): void
     {
         $repo = $this->createMock(ConsignorRepository::class);

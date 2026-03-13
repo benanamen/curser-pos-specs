@@ -36,42 +36,51 @@ final class PayoutService
             $balance = $this->consignorService->getBalance($consignor->id);
             $rentDue = $this->boothRentalService->getRentDue($consignor->id);
             $rentAmount = $rentDue !== null ? $rentDue['amount'] : 0.0;
-            $payoutAmount = round($balance->balance - $rentAmount, 2);
+            $payoutAmountCandidate = $balance->balance - $rentAmount;
+            $payoutAmount = round(max($payoutAmountCandidate, 0.0), 2);
 
-            if ($payoutAmount < $minimumAmount) {
-                continue;
-            }
-
-            if ($rentAmount > 0 && $rentDue !== null) {
-                $payoutId = $this->payoutRepository->create($consignor->id, $payoutAmount, $method);
+            if ($payoutAmount >= $minimumAmount) {
+                if ($rentAmount > 0 && $rentDue !== null) {
+                    $payoutId = $this->payoutRepository->create($consignor->id, $payoutAmount, $method);
+                    $this->boothRentalService->recordDeduction(
+                        $consignor->id,
+                        $rentAmount,
+                        $rentDue['period_start'],
+                        $rentDue['period_end'],
+                        $payoutId
+                    );
+                    $this->consignorService->deductForPayoutAndRent($consignor->id, $payoutAmount, $rentAmount);
+                    $this->payoutRepository->markProcessed($payoutId);
+                    $results[] = [
+                        'payout_id' => $payoutId,
+                        'consignor_id' => $consignor->id,
+                        'amount' => $payoutAmount,
+                        'rent_deducted' => $rentAmount,
+                        'method' => $method,
+                    ];
+                } else {
+                    $amount = round($balance->balance, 2);
+                    $payoutId = $this->payoutRepository->create($consignor->id, $amount, $method);
+                    $this->consignorService->deductForPayout($consignor->id, $amount);
+                    $this->payoutRepository->markProcessed($payoutId);
+                    $results[] = [
+                        'payout_id' => $payoutId,
+                        'consignor_id' => $consignor->id,
+                        'amount' => $amount,
+                        'rent_deducted' => 0.0,
+                        'method' => $method,
+                    ];
+                }
+            } elseif ($rentAmount > 0 && $rentDue !== null) {
+                // No payout (below minimum), but rent is still due and must be recorded and deducted.
                 $this->boothRentalService->recordDeduction(
                     $consignor->id,
                     $rentAmount,
                     $rentDue['period_start'],
                     $rentDue['period_end'],
-                    $payoutId
+                    null
                 );
-                $this->consignorService->deductForPayoutAndRent($consignor->id, $payoutAmount, $rentAmount);
-                $this->payoutRepository->markProcessed($payoutId);
-                $results[] = [
-                    'payout_id' => $payoutId,
-                    'consignor_id' => $consignor->id,
-                    'amount' => $payoutAmount,
-                    'rent_deducted' => $rentAmount,
-                    'method' => $method,
-                ];
-            } else {
-                $amount = round($balance->balance, 2);
-                $payoutId = $this->payoutRepository->create($consignor->id, $amount, $method);
-                $this->consignorService->deductForPayout($consignor->id, $amount);
-                $this->payoutRepository->markProcessed($payoutId);
-                $results[] = [
-                    'payout_id' => $payoutId,
-                    'consignor_id' => $consignor->id,
-                    'amount' => $amount,
-                    'rent_deducted' => 0.0,
-                    'method' => $method,
-                ];
+                $this->consignorService->deductRentOnly($consignor->id, $rentAmount);
             }
         }
 

@@ -37,6 +37,7 @@ final class PayoutServiceTest extends TestCase
         $consignorRepo->method('findById')->willReturn($consignor);
         $consignorService = $this->createMock(ConsignorService::class);
         $consignorService->method('getBalance')->willReturn($balance);
+        $consignorService->expects($this->never())->method('deductRentOnly');
         $payoutRepo = $this->createMock(PayoutRepository::class);
         $boothService = $this->createMock(BoothRentalService::class);
         $boothService->method('getRentDue')->willReturn(null);
@@ -131,6 +132,44 @@ final class PayoutServiceTest extends TestCase
         $this->assertSame('c1', $result[0]['consignor_id']);
         $this->assertSame(150.0, $result[0]['amount']);
         $this->assertSame(50.0, $result[0]['rent_deducted']);
+    }
+
+    public function testRunPayoutRunChargesRentEvenWhenBelowMinimum(): void
+    {
+        $consignor = new Consignor('c1', 's1', null, 'Name', null, null, null, 50.0, null, 'active', null, new \DateTimeImmutable(), new \DateTimeImmutable());
+        $balance = new ConsignorBalance('c1', 50.0, 0.0, 0.0, new \DateTimeImmutable());
+
+        $consignorRepo = $this->createMock(ConsignorRepository::class);
+        $consignorRepo->method('findById')->willReturn($consignor);
+        $consignorService = $this->createMock(ConsignorService::class);
+        $consignorService->method('getBalance')->willReturn($balance);
+        $consignorService
+            ->expects($this->once())
+            ->method('deductRentOnly')
+            ->with('c1', 100.0);
+
+        $payoutRepo = $this->createMock(PayoutRepository::class);
+        $boothService = $this->createMock(BoothRentalService::class);
+        $boothService->method('getRentDue')->willReturn([
+            'amount' => 100.0,
+            'period_start' => new \DateTimeImmutable('2025-01-01'),
+            'period_end' => new \DateTimeImmutable('2025-01-31'),
+        ]);
+        $boothService
+            ->expects($this->once())
+            ->method('recordDeduction')
+            ->with(
+                'c1',
+                100.0,
+                $this->isInstanceOf(\DateTimeImmutable::class),
+                $this->isInstanceOf(\DateTimeImmutable::class),
+                null
+            );
+
+        $service = new PayoutService($consignorRepo, $consignorService, $payoutRepo, $boothService);
+        $result = $service->runPayoutRun(['c1'], 50.1, 'check');
+
+        $this->assertSame([], $result);
     }
 
     public function testPreviewPayoutRunSkipsBelowMinimum(): void

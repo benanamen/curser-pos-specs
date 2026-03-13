@@ -214,30 +214,35 @@ Before changing behavior or UI, it is important to clarify the following with st
 
 ---
 
-## 5. Suggested Direction and Next Steps
+## 5. Chosen Policy and Example
 
-From a product perspective, both policies (A and B) are viable; the choice depends on what is fair and practical for your particular stores and vendors.
+For Perfect Consign, the chosen policy is **Option B – rent is due regardless of sales**, with the following clarifications:
 
-If stores lean toward **“rent is due regardless of sales”**:
+- Booth rent is a **fixed obligation each period** for booth consignors.
+- Rent is taken **first from consignor commissions/balance** when available.
+- If the consignor’s balance is **less than the rent due**, the **remaining rent is still owed**:
+  - The system records the full rent as deducted (via `RentDeductionRepository`).
+  - The consignor’s balance may become **negative**, representing money they owe the store.
+  - Store staff can later record cash/card payments or future sales to bring the balance back toward zero.
+- Payouts are only created when the **net payout after rent** meets the store’s minimum payout threshold.
 
-- The system should:
-  - Explicitly support **negative consignor balances**, or maintain a parallel “rent receivable” ledger.
-  - Treat booth rent as a **first‑class, periodic charge** that is always posted.
-  - Ensure payout logic:
-    - Applies rent charges for the period.
-    - Only pays cash out when the resulting balance and minimum payout rules allow it.
-  - Provide clear UI and reports for:
-    - Current balance (positive or negative).
-    - Rent due/charged by period.
-    - Payouts executed.
-    - Total consignor share (earnings) over selected ranges.
+### Example
 
-If stores prefer **“rent only from sales”**:
+- Monthly booth rent: **$200**
+- Starting consignor balance (before rent): **$50**
+- No additional sales this month.
 
-- The existing pattern (rent deducted only when there is sufficient balance in a payout run) is closer to their expectations, but should be:
-  - Documented clearly.
-  - Supported with UI hints, so it is obvious when rent was not collected because of insufficient balance.
-  - Potentially complemented with off‑system or custom workflows (e.g. manual invoicing) for when they do want to pursue rent separately.
+With the chosen policy:
 
-This document is meant as a starting point for those conversations. Once clients have chosen the desired policy, implementation details (schema, API, and UI behavior) can be updated to align with that decision.
+1. Rent due is computed as **$200**.
+2. The full **$200** is recorded as a rent deduction for the period.
+3. The consignor’s balance is reduced by $200:
+   - New balance = $50 − $200 = **−$150**
+4. No payout is issued (net payout is below any reasonable minimum).
+5. The **−$150 balance** represents rent arrears the consignor owes the store. When they have future sales or pay cash/card, the store can apply those amounts to reduce this negative balance.
+
+UI and reports should make this interpretation clear:
+
+- Positive balance → store owes consignor.
+- Negative balance → consignor owes store (often due to unpaid rent).
 
