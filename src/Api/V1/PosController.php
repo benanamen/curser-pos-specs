@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace CurserPos\Api\V1;
 
-use CurserPos\Domain\Sale\SaleRepository;
 use CurserPos\Domain\Sale\PaymentRepository;
+use CurserPos\Domain\Sale\SaleRepository;
 use CurserPos\Http\RequestContextHolder;
 use CurserPos\Service\PosService;
+use CurserPos\Service\ReceiptEmailService;
 use PerfectApp\Routing\Route;
 
 final class PosController
@@ -16,6 +17,7 @@ final class PosController
         private readonly PosService $posService,
         private readonly SaleRepository $saleRepository,
         private readonly PaymentRepository $paymentRepository,
+        private readonly ReceiptEmailService $receiptEmailService,
         private readonly \CurserPos\Service\AuditService $auditService
     ) {
     }
@@ -189,13 +191,17 @@ final class PosController
             return;
         }
         $input = $this->getJsonInput();
-        $email = isset($input['email']) && $input['email'] !== '' ? (string) $input['email'] : null;
-        if ($email === null) {
+        $email = isset($input['email']) && $input['email'] !== '' ? trim((string) $input['email']) : null;
+        if ($email === null || $email === '') {
             $this->json(400, ['error' => 'email is required']);
             return;
         }
-        // Stub: no email sent in API-only MVP; UI or job queue would send
-        $this->json(200, ['message' => 'Receipt email queued', 'sale_id' => $id, 'email' => $email]);
+        $sent = $this->receiptEmailService->sendReceipt($id, $email);
+        if ($sent) {
+            $this->json(200, ['message' => 'Receipt sent', 'sale_id' => $id, 'email' => $email]);
+            return;
+        }
+        $this->json(503, ['error' => 'Failed to send receipt email. Check store email configuration.']);
     }
 
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/pos/sales/([0-9a-fA-F-]{36})', ['GET'])]

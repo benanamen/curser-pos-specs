@@ -119,6 +119,14 @@ $container->set(\CurserPos\Domain\Billing\BillingProviderInterface::class, funct
 
 $container->set(\CurserPos\Service\BillingService::class, \CurserPos\Service\BillingService::class);
 
+$container->set(\CurserPos\Service\ReceiptEmailService::class, function (Container $c) {
+    return new \CurserPos\Service\ReceiptEmailService(
+        $c->get(\CurserPos\Domain\Sale\SaleRepository::class),
+        $c->get(\CurserPos\Domain\Sale\PaymentRepository::class),
+        $c->get(\CurserPos\Domain\Item\ItemRepository::class)
+    );
+});
+
 $container->set(\CurserPos\Infrastructure\Payment\PaymentProcessorInterface::class, function (Container $c) {
     $key = $_ENV['STRIPE_SECRET_KEY'] ?? 'test';
     return new \CurserPos\Infrastructure\Payment\StripePaymentProcessor($key);

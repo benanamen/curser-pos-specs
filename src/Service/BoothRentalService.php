@@ -39,17 +39,19 @@ class BoothRentalService
 
     /**
      * Compute rent due from last deduction (or assignment start) through end of the given date.
+     * Pro-rates by day using billing cycle day (1-31); partial months are charged proportionally.
      * Returns [amount, period_start, period_end] or null if no assignment or no rent due.
      *
      * @return array{amount: float, period_start: \DateTimeImmutable, period_end: \DateTimeImmutable}|null
      */
-    public function getRentDue(string $consignorId, ?\DateTimeImmutable $throughDate = null): ?array
+    public function getRentDue(string $consignorId, ?\DateTimeImmutable $throughDate = null, int $rentCycleDay = 1): ?array
     {
         $assignment = $this->assignmentRepository->getActiveByConsignorId($consignorId);
         if ($assignment === null) {
             return null;
         }
 
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
         $through = $throughDate ?? new \DateTimeImmutable();
         $periodStart = $this->rentDeductionRepository->getLastDeductionDate($consignorId);
         if ($periodStart !== null) {
@@ -62,23 +64,14 @@ class BoothRentalService
             return null;
         }
 
-        $months = $this->countFullMonths($periodStart, $through);
-        if ($months < 1) {
-            return null;
-        }
-
-        $amount = round($assignment->monthlyRent * $months, 2);
+        $periodEnd = $through;
+        $amount = $this->computeProratedRent($periodStart, $periodEnd, $assignment->monthlyRent, $rentCycleDay);
         if ($amount <= 0) {
             return null;
         }
 
-        $periodEnd = $periodStart->modify('+' . $months . ' months')->modify('-1 day');
-        if ($periodEnd > $through) {
-            $periodEnd = $through;
-        }
-
         return [
-            'amount' => $amount,
+            'amount' => round($amount, 2),
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
         ];
@@ -92,18 +85,59 @@ class BoothRentalService
         return $this->rentDeductionRepository->record($consignorId, $amount, $periodStart, $periodEnd, $payoutId);
     }
 
-    /**
-     * Deduct rent from consignor balance (when rent is taken from payout we already deduct payout amount;
-     * we need to also reduce balance by the rent portion so the net effect is balance -= payout + rent, then we add back payout as paid.
-     * Actually: current flow is balance has sales. Payout = balance. We want payout_after_rent = balance - rent_due, then deduct balance by payout_after_rent and record rent_deduction.
-     * So we don't "deduct rent from balance" separately - we just reduce the payout amount. So recordDeduction is enough. The ConsignorService.deductForPayout will be called with (payout_amount) which is already (balance - rent). So we're good.
-     */
-    private function countFullMonths(\DateTimeImmutable $from, \DateTimeImmutable $to): int
+    private function computeProratedRent(\DateTimeImmutable $periodStart, \DateTimeImmutable $periodEnd, float $monthlyRent, int $rentCycleDay): float
     {
-        if ($from > $to) {
-            return 0;
+        if ($periodStart > $periodEnd) {
+            return 0.0;
         }
-        $diff = $from->diff($to);
-        return $diff->y * 12 + $diff->m + 1;
+        $total = 0.0;
+        $current = $periodStart;
+        while ($current <= $periodEnd) {
+            $billingStart = $this->startOfBillingMonthContaining($current, $rentCycleDay);
+            $billingEnd = $this->endOfBillingMonthContaining($current, $rentCycleDay);
+            $segmentStart = $current > $billingStart ? $current : $billingStart;
+            $segmentEnd = $periodEnd < $billingEnd ? $periodEnd : $billingEnd;
+            if ($segmentStart <= $segmentEnd) {
+                $daysInBilling = $this->daysBetween($billingStart, $billingEnd) + 1;
+                $daysInSegment = $this->daysBetween($segmentStart, $segmentEnd) + 1;
+                $total += ($daysInSegment / $daysInBilling) * $monthlyRent;
+            }
+            $current = $billingEnd->modify('+1 day');
+        }
+        return $total;
+    }
+
+    private function startOfBillingMonthContaining(\DateTimeImmutable $date, int $cycleDay): \DateTimeImmutable
+    {
+        $y = (int) $date->format('Y');
+        $m = (int) $date->format('m');
+        $d = (int) $date->format('d');
+        $lastDay = (int) $date->format('t');
+        $effectiveDay = min($cycleDay, $lastDay);
+        if ($d >= $effectiveDay) {
+            return new \DateTimeImmutable(sprintf('%04d-%02d-%02d', $y, $m, $effectiveDay));
+        }
+        $prev = $date->modify('first day of last month');
+        $prevLast = (int) $prev->format('t');
+        $prevEffective = min($cycleDay, $prevLast);
+        return new \DateTimeImmutable(sprintf('%04d-%02d-%02d', (int) $prev->format('Y'), (int) $prev->format('m'), $prevEffective));
+    }
+
+    private function endOfBillingMonthContaining(\DateTimeImmutable $date, int $cycleDay): \DateTimeImmutable
+    {
+        $start = $this->startOfBillingMonthContaining($date, $cycleDay);
+        $next = $start->modify('+1 month');
+        $nextY = (int) $next->format('Y');
+        $nextM = (int) $next->format('m');
+        $nextLast = (int) $next->format('t');
+        $nextEffective = min($cycleDay, $nextLast);
+        $nextStart = new \DateTimeImmutable(sprintf('%04d-%02d-%02d', $nextY, $nextM, $nextEffective));
+        return $nextStart->modify('-1 day');
+    }
+
+    private function daysBetween(\DateTimeImmutable $a, \DateTimeImmutable $b): int
+    {
+        $diff = $a->diff($b);
+        return $diff->days;
     }
 }

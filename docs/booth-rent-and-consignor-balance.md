@@ -37,7 +37,7 @@ The system maintains a separate **consignor balance** record, modeled by `Consig
 
 - `balance` – current net amount the store **owes to the consignor**.
 - `pending_sales` – sales that are not yet fully settled into the balance (if used).
--,paid_out` – total amount that has been **paid out historically** to the consignor.
+- `paid_out` – total amount that has been **paid out historically** to the consignor.
 
 In the API and web UI, a consignor’s balance fields appear as:
 
@@ -60,10 +60,12 @@ For consignors who rent booths, the system tracks:
 - **Rent due** for a given period (e.g., a monthly booth charge).
 - **Rent deductions** – amounts of rent that have been satisfied (typically via payout runs).
 
+Rent is **pro-rated by day**: partial months are charged as (days in period / days in that billing month) × monthly rent. The store setting **billing cycle day** (default: 1st of the month) defines how billing months are aligned; each billing month runs from that day through the day before the same day next month (e.g. 1 = calendar month; 15 = 15th through 14th of next month).
+
 `BoothRentalService` and `RentDeductionRepository` encapsulate this logic. At a high level:
 
-- `BoothRentalService::getRentDue(consignor_id)` returns:
-  - `amount` – rent owed for the relevant period.
+- `BoothRentalService::getRentDue(consignor_id, through_date, rent_cycle_day)` returns:
+  - `amount` – rent owed for the relevant period (pro-rated for partial months).
   - `period_start`, `period_end` – the period covered.
 - `RentDeductionRepository` stores which portions of rent have already been deducted (collected) from consignor balances or payouts.
 
@@ -78,7 +80,7 @@ The Vendor‑mall report uses this to compute:
 When you run a payout run for consignors, the flow for booth renters looks like this:
 
 1. Fetch the consignor’s **current balance** via `ConsignorService::getBalance(consignor_id)`.
-2. Ask `BoothRentalService::getRentDue(consignor_id)` for the current booth rent due.
+2. Ask `BoothRentalService::getRentDue(consignor_id, …)` for the current booth rent due (using the store’s billing cycle day for pro-rating).
 3. Compute:
 
    \[

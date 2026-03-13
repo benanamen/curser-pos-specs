@@ -23,9 +23,10 @@ final class PayoutService
      * @param list<string> $consignorIds Optional; if empty, all consignors with balance >= minimum
      * @return list<array{payout_id: string, consignor_id: string, amount: float, rent_deducted: float, method: string}>
      */
-    public function runPayoutRun(array $consignorIds, float $minimumAmount, string $method = 'check'): array
+    public function runPayoutRun(array $consignorIds, float $minimumAmount, string $method = 'check', int $rentCycleDay = 1): array
     {
         $method = in_array($method, ['check', 'cash', 'store_credit', 'ach'], true) ? $method : 'check';
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
         $results = [];
 
         $consignors = $consignorIds !== []
@@ -34,7 +35,7 @@ final class PayoutService
 
         foreach ($consignors as $consignor) {
             $balance = $this->consignorService->getBalance($consignor->id);
-            $rentDue = $this->boothRentalService->getRentDue($consignor->id);
+            $rentDue = $this->boothRentalService->getRentDue($consignor->id, null, $rentCycleDay);
             $rentAmount = $rentDue !== null ? $rentDue['amount'] : 0.0;
             $payoutAmountCandidate = $balance->balance - $rentAmount;
             $payoutAmount = round(max($payoutAmountCandidate, 0.0), 2);
@@ -92,14 +93,15 @@ final class PayoutService
      *
      * @return list<array{consignor_id: string, name: string, balance: float, rent_due: float, payout_amount: float}>
      */
-    public function previewPayoutRun(float $minimumAmount): array
+    public function previewPayoutRun(float $minimumAmount, int $rentCycleDay = 1): array
     {
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
         $consignors = $this->consignorRepository->findAll('active');
         $results = [];
 
         foreach ($consignors as $consignor) {
             $balance = $this->consignorService->getBalance($consignor->id);
-            $rentDue = $this->boothRentalService->getRentDue($consignor->id);
+            $rentDue = $this->boothRentalService->getRentDue($consignor->id, null, $rentCycleDay);
             $rentAmount = $rentDue !== null ? $rentDue['amount'] : 0.0;
             $payoutAmount = round($balance->balance - $rentAmount, 2);
 

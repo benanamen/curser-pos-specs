@@ -28,8 +28,10 @@ final class PayoutController
         $consignorIds = is_array($consignorIds) ? array_values(array_filter($consignorIds, 'is_string')) : [];
         $minimumAmount = (float) ($input['minimum_amount'] ?? 0);
         $method = (string) ($input['method'] ?? 'check');
+        $rentCycleDay = (int) ($context?->tenant?->settings['booth_rent_cycle_day'] ?? 1);
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
 
-        $results = $this->payoutService->runPayoutRun($consignorIds, $minimumAmount, $method);
+        $results = $this->payoutService->runPayoutRun($consignorIds, $minimumAmount, $method, $rentCycleDay);
         $this->auditService->log(
             $context?->tenant?->id,
             $context?->user?->id,
@@ -46,8 +48,11 @@ final class PayoutController
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/payouts/preview', ['GET'])]
     public function preview(string $slug): void
     {
+        $context = \CurserPos\Http\RequestContextHolder::get();
         $minimumAmount = isset($_GET['minimum_amount']) ? (float) $_GET['minimum_amount'] : 0.0;
-        $rows = $this->payoutService->previewPayoutRun($minimumAmount);
+        $rentCycleDay = (int) ($context?->tenant?->settings['booth_rent_cycle_day'] ?? 1);
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
+        $rows = $this->payoutService->previewPayoutRun($minimumAmount, $rentCycleDay);
         $this->json(200, ['preview' => $rows]);
     }
 

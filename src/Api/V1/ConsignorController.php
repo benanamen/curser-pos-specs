@@ -30,6 +30,9 @@ final class ConsignorController
     {
         $status = $_GET['status'] ?? 'active';
         $consignors = $this->consignorRepository->findAll($status);
+        $context = RequestContextHolder::get();
+        $rentCycleDay = (int) ($context?->tenant?->settings['booth_rent_cycle_day'] ?? 1);
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
         $result = [];
         foreach ($consignors as $c) {
             $arr = $this->consignorToArray($c);
@@ -37,6 +40,22 @@ final class ConsignorController
             $arr['balance'] = $balance->balance;
             $arr['pending_sales'] = $balance->pendingSales;
             $arr['paid_out'] = $balance->paidOut;
+            $assignment = $this->assignmentRepository->getActiveByConsignorId($c->id);
+            $arr['booth_assignment'] = $assignment !== null ? [
+                'booth_id' => $assignment->boothId,
+                'started_at' => $assignment->startedAt->format('Y-m-d'),
+                'monthly_rent' => $assignment->monthlyRent,
+            ] : null;
+            $rentDue = $assignment !== null ? $this->boothRentalService->getRentDue($c->id, null, $rentCycleDay) : null;
+            if ($rentDue !== null) {
+                $arr['rent_due'] = $rentDue['amount'];
+                $arr['rent_period_start'] = $rentDue['period_start']->format('Y-m-d');
+                $arr['rent_period_end'] = $rentDue['period_end']->format('Y-m-d');
+            } else {
+                $arr['rent_due'] = 0.0;
+                $arr['rent_period_start'] = null;
+                $arr['rent_period_end'] = null;
+            }
             $result[] = $arr;
         }
         $this->json(200, $result);
@@ -78,7 +97,9 @@ final class ConsignorController
         $email = isset($input['email']) && $input['email'] !== '' ? (string) $input['email'] : null;
         $phone = isset($input['phone']) && $input['phone'] !== '' ? (string) $input['phone'] : null;
         $address = isset($input['address']) && $input['address'] !== '' ? (string) $input['address'] : null;
-        $commission = (float) ($input['default_commission_pct'] ?? 50.0);
+        $commission = array_key_exists('default_commission_pct', $input)
+            ? (float) $input['default_commission_pct']
+            : (float) (RequestContextHolder::get()?->tenant?->settings['default_commission_pct'] ?? 50.0);
         $agreementSignedAt = isset($input['agreement_signed_at']) && $input['agreement_signed_at'] !== ''
             ? new \DateTimeImmutable((string) $input['agreement_signed_at'])
             : null;
@@ -218,7 +239,10 @@ final class ConsignorController
             $this->json(404, ['error' => 'Consignor not found']);
             return;
         }
-        $rentDue = $this->boothRentalService->getRentDue($id);
+        $context = RequestContextHolder::get();
+        $rentCycleDay = (int) ($context?->tenant?->settings['booth_rent_cycle_day'] ?? 1);
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
+        $rentDue = $this->boothRentalService->getRentDue($id, null, $rentCycleDay);
         if ($rentDue === null) {
             $this->json(200, ['consignor_id' => $id, 'rent_due' => 0, 'period_start' => null, 'period_end' => null]);
             return;

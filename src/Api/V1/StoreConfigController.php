@@ -32,6 +32,9 @@ final class StoreConfigController
         $taxApplyByDefault = is_array($taxConfig) && array_key_exists('apply_by_default', $taxConfig)
             ? (bool) $taxConfig['apply_by_default']
             : true;
+        $boothRentCycleDay = (int) ($settings['booth_rent_cycle_day'] ?? 1);
+        $boothRentCycleDay = max(1, min(31, $boothRentCycleDay));
+        $boothRentalsEnabled = (bool) ($settings['booth_rentals_enabled'] ?? false);
         $this->json(200, [
             'store_name' => $tenant->name,
             'store_slug' => $tenant->slug,
@@ -44,6 +47,9 @@ final class StoreConfigController
             'tax_apply_by_default' => $taxApplyByDefault,
             'consignment_terms' => $settings['consignment_terms'] ?? null,
             'expiration_days' => $settings['expiration_days'] ?? 90,
+            'booth_rent_cycle_day' => $boothRentCycleDay,
+            'booth_rentals_enabled' => $boothRentalsEnabled,
+            'receipt_footer_text' => $settings['receipt_footer_text'] ?? null,
         ]);
     }
 
@@ -82,6 +88,7 @@ final class StoreConfigController
             'store_address' => $settings['store_address'] ?? null,
             'store_phone' => $settings['store_phone'] ?? null,
             'store_email' => $settings['store_email'] ?? null,
+            'receipt_footer_text' => $settings['receipt_footer_text'] ?? null,
         ]);
     }
 
@@ -133,6 +140,16 @@ final class StoreConfigController
         if (array_key_exists('expiration_days', $input)) {
             $settings['expiration_days'] = (int) $input['expiration_days'];
         }
+        if (array_key_exists('booth_rent_cycle_day', $input)) {
+            $v = (int) $input['booth_rent_cycle_day'];
+            $settings['booth_rent_cycle_day'] = max(1, min(31, $v));
+        }
+        if (array_key_exists('booth_rentals_enabled', $input)) {
+            $settings['booth_rentals_enabled'] = (bool) $input['booth_rentals_enabled'];
+        }
+        if (array_key_exists('receipt_footer_text', $input)) {
+            $settings['receipt_footer_text'] = $input['receipt_footer_text'] !== '' && $input['receipt_footer_text'] !== null ? (string) $input['receipt_footer_text'] : null;
+        }
 
         $stmt = $this->pdo->prepare('UPDATE public.tenants SET settings = ?::jsonb, updated_at = ? WHERE id = ?');
         $stmt->execute([json_encode($settings), (new \DateTimeImmutable())->format('Y-m-d H:i:s'), $tenant->id]);
@@ -154,6 +171,9 @@ final class StoreConfigController
         $taxApplyByDefault = is_array($taxConfig) && array_key_exists('apply_by_default', $taxConfig)
             ? (bool) $taxConfig['apply_by_default']
             : true;
+        $boothRentCycleDay = (int) ($settings['booth_rent_cycle_day'] ?? 1);
+        $boothRentCycleDay = max(1, min(31, $boothRentCycleDay));
+        $boothRentalsEnabled = (bool) ($settings['booth_rentals_enabled'] ?? false);
         $this->json(200, [
             'store_name' => $tenant->name,
             'store_slug' => $tenant->slug,
@@ -166,6 +186,9 @@ final class StoreConfigController
             'tax_apply_by_default' => $taxApplyByDefault,
             'consignment_terms' => $settings['consignment_terms'] ?? null,
             'expiration_days' => $settings['expiration_days'] ?? 90,
+            'booth_rent_cycle_day' => $boothRentCycleDay,
+            'booth_rentals_enabled' => $boothRentalsEnabled,
+            'receipt_footer_text' => $settings['receipt_footer_text'] ?? null,
         ]);
     }
 

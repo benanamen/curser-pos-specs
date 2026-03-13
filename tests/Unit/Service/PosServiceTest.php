@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CurserPos\Tests\Unit\Service;
 
+use CurserPos\Domain\Consignor\Consignor;
+use CurserPos\Domain\Consignor\ConsignorRepository;
 use CurserPos\Domain\Item\Item;
 use CurserPos\Domain\Item\ItemRepository;
 use CurserPos\Domain\Sale\GiftCardRepository;
@@ -70,8 +72,9 @@ final class PosServiceTest extends TestCase
         $itemHoldRepo = new ItemHoldRepository($pdo);
         $storeCreditRepo = $this->createMock(StoreCreditRepository::class);
         $giftCardRepo = $this->createMock(GiftCardRepository::class);
+        $consignorRepo = $this->createDefaultConsignorRepository();
 
-        $service = new PosService($pdo, $saleRepo, $paymentRepo, $itemRepo, $consignorService, $processor, $heldRepo, $itemHoldRepo, $storeCreditRepo, $giftCardRepo);
+        $service = new PosService($pdo, $saleRepo, $paymentRepo, $itemRepo, $consignorRepo, $consignorService, $processor, $heldRepo, $itemHoldRepo, $storeCreditRepo, $giftCardRepo);
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Cart cannot be empty');
         $service->checkout('user-1', null, null, [], []);
@@ -634,7 +637,32 @@ final class PosServiceTest extends TestCase
         $itemHoldRepo = $overrides['itemHoldRepository'] ?? new ItemHoldRepository($pdo);
         $storeCreditRepo = $overrides['storeCreditRepository'] ?? $this->createMock(StoreCreditRepository::class);
         $giftCardRepo = $overrides['giftCardRepository'] ?? $this->createMock(GiftCardRepository::class);
+        $consignorRepo = $overrides['consignorRepository'] ?? $this->createDefaultConsignorRepository();
 
-        return new PosService($pdo, $saleRepo, $paymentRepo, $itemRepo, $consignorService, $processor, $heldRepo, $itemHoldRepo, $storeCreditRepo, $giftCardRepo);
+        return new PosService($pdo, $saleRepo, $paymentRepo, $itemRepo, $consignorRepo, $consignorService, $processor, $heldRepo, $itemHoldRepo, $storeCreditRepo, $giftCardRepo);
+    }
+
+    private function createDefaultConsignorRepository(): ConsignorRepository
+    {
+        $consignor = new Consignor(
+            'cons-1',
+            'c1',
+            null,
+            'Name',
+            null,
+            null,
+            null,
+            50.0,
+            null,
+            'active',
+            null,
+            new \DateTimeImmutable(),
+            new \DateTimeImmutable()
+        );
+        $repo = $this->createMock(ConsignorRepository::class);
+        $repo->method('findById')->willReturnCallback(function (string $id) use ($consignor): ?Consignor {
+            return $id === 'cons-1' ? $consignor : null;
+        });
+        return $repo;
     }
 }

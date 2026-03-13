@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CurserPos\Service;
 
+use CurserPos\Domain\Consignor\ConsignorRepository;
 use CurserPos\Domain\Item\Item;
 use CurserPos\Domain\Item\ItemRepository;
 use CurserPos\Domain\Sale\PaymentRepository;
@@ -27,6 +28,7 @@ final class PosService
         private readonly SaleRepository $saleRepository,
         private readonly PaymentRepository $paymentRepository,
         private readonly ItemRepository $itemRepository,
+        private readonly ConsignorRepository $consignorRepository,
         private readonly ConsignorService $consignorService,
         private readonly PaymentProcessorInterface $paymentProcessor,
         private readonly HeldSaleRepository $heldSaleRepository,
@@ -106,8 +108,17 @@ final class PosService
                 throw new \InvalidArgumentException("Item discount for {$item->sku} exceeds line total");
             }
             $lineTotal = $lineBeforeDiscount - $lineDiscount;
-            $storeShare = $lineTotal * ($item->storeSharePct / 100);
-            $consignorShare = $lineTotal * ($item->consignorSharePct / 100);
+            $storeSharePct = 100.0;
+            $consignorSharePct = 0.0;
+            if ($item->consignorId !== null) {
+                $consignor = $this->consignorRepository->findById($item->consignorId);
+                if ($consignor !== null) {
+                    $storeSharePct = $consignor->defaultCommissionPct;
+                    $consignorSharePct = 100.0 - $storeSharePct;
+                }
+            }
+            $storeShare = $lineTotal * ($storeSharePct / 100);
+            $consignorShare = $lineTotal * ($consignorSharePct / 100);
             $subtotal += $lineTotal;
             $lineItems[] = [
                 'item' => $item,

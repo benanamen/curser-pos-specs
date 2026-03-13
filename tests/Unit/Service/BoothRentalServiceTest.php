@@ -111,12 +111,66 @@ final class BoothRentalServiceTest extends TestCase
         $boothRepo = $this->createMock(BoothRepository::class);
 
         $service = new BoothRentalService($assignmentRepo, $rentRepo, $boothRepo);
-        $result = $service->getRentDue('c1', new \DateTimeImmutable('2025-02-10'));
+        $result = $service->getRentDue('c1', new \DateTimeImmutable('2025-02-10'), 1);
 
         $this->assertNotNull($result);
-        $this->assertSame(100.0, $result['amount']);
+        $this->assertSame(35.71, $result['amount']);
         $this->assertInstanceOf(\DateTimeImmutable::class, $result['period_start']);
         $this->assertSame('2025-02-01', $result['period_start']->format('Y-m-d'));
+    }
+
+    public function testGetRentDueProratesPartialFirstMonth(): void
+    {
+        $assignment = new ConsignorBoothAssignment(
+            'a1',
+            'c1',
+            'b1',
+            new \DateTimeImmutable('2025-01-15'),
+            null,
+            100.0,
+            new \DateTimeImmutable(),
+            new \DateTimeImmutable()
+        );
+        $assignmentRepo = $this->createMock(ConsignorBoothAssignmentRepository::class);
+        $assignmentRepo->method('getActiveByConsignorId')->willReturn($assignment);
+        $rentRepo = $this->createMock(RentDeductionRepository::class);
+        $rentRepo->method('getLastDeductionDate')->willReturn(null);
+        $boothRepo = $this->createMock(BoothRepository::class);
+
+        $service = new BoothRentalService($assignmentRepo, $rentRepo, $boothRepo);
+        $result = $service->getRentDue('c1', new \DateTimeImmutable('2025-01-31'), 1);
+
+        $this->assertNotNull($result);
+        $this->assertSame(54.84, $result['amount']);
+        $this->assertSame('2025-01-15', $result['period_start']->format('Y-m-d'));
+        $this->assertSame('2025-01-31', $result['period_end']->format('Y-m-d'));
+    }
+
+    public function testGetRentDueProratesFullMonthPlusPartial(): void
+    {
+        $assignment = new ConsignorBoothAssignment(
+            'a1',
+            'c1',
+            'b1',
+            new \DateTimeImmutable('2025-01-01'),
+            null,
+            100.0,
+            new \DateTimeImmutable(),
+            new \DateTimeImmutable()
+        );
+        $assignmentRepo = $this->createMock(ConsignorBoothAssignmentRepository::class);
+        $assignmentRepo->method('getActiveByConsignorId')->willReturn($assignment);
+        $rentRepo = $this->createMock(RentDeductionRepository::class);
+        $rentRepo->method('getLastDeductionDate')->willReturn(null);
+        $boothRepo = $this->createMock(BoothRepository::class);
+
+        $service = new BoothRentalService($assignmentRepo, $rentRepo, $boothRepo);
+        $result = $service->getRentDue('c1', new \DateTimeImmutable('2025-03-10'), 1);
+
+        $this->assertNotNull($result);
+        $this->assertSame(232.26, $result['amount']);
+        $this->assertSame('2025-01-01', $result['period_start']->format('Y-m-d'));
+        $this->assertSame('2025-03-10', $result['period_end']->format('Y-m-d'));
     }
 
     public function testGetRentDueReturnsNullWhenThroughBeforeStart(): void
