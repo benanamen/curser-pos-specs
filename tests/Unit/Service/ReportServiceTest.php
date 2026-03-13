@@ -53,7 +53,13 @@ final class ReportServiceTest extends TestCase
         $stmt = $this->createMock(PDOStatement::class);
         $stmt->method('execute');
         $stmt->method('fetchAll')->willReturn([
-            ['consignor_id' => 'c1', 'sale_count' => 3, 'total_share' => 150.0],
+            [
+                'consignor_id' => 'c1',
+                'consignor_name' => 'Vendor One',
+                'consignor_custom_id' => 'V001',
+                'sale_count' => 3,
+                'total_share' => 150.0,
+            ],
         ]);
 
         $pdo = $this->createMock(PDO::class);
@@ -64,6 +70,8 @@ final class ReportServiceTest extends TestCase
         $result = $service->salesByConsignor();
         $this->assertCount(1, $result);
         $this->assertSame('c1', $result[0]['consignor_id']);
+        $this->assertSame('Vendor One', $result[0]['consignor_name']);
+        $this->assertSame('V001', $result[0]['consignor_custom_id']);
     }
 
     public function testInventorySummary(): void
@@ -137,8 +145,7 @@ final class ReportServiceTest extends TestCase
         $boothStmt->method('fetchColumn')->willReturn(5);
 
         $pdo = $this->createMock(PDO::class);
-        $pdo->method('prepare')->willReturnOnConsecutiveCalls($salesStmt, $assignStmt);
-        $pdo->method('query')->willReturn($boothStmt);
+        $pdo->method('prepare')->willReturnOnConsecutiveCalls($salesStmt, $assignStmt, $boothStmt);
         $rentRepo = $this->createMock(RentDeductionRepository::class);
         $rentRepo->method('sumCollected')->willReturn(500.0);
 

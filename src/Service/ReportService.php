@@ -42,7 +42,7 @@ class ReportService
      */
     public function salesByConsignor(?string $dateFrom = null, ?string $dateTo = null): array
     {
-        $sql = 'SELECT consignor_id, COUNT(*) AS sale_count, COALESCE(SUM(consignor_share), 0) AS total_share FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.status = ?';
+        $sql = 'SELECT si.consignor_id, c.name AS consignor_name, c.custom_id AS consignor_custom_id, COUNT(*) AS sale_count, COALESCE(SUM(consignor_share), 0) AS total_share FROM sale_items si JOIN sales s ON s.id = si.sale_id JOIN consignors c ON c.id = si.consignor_id WHERE s.status = ?';
         $params = ['completed'];
         if ($dateFrom !== null) {
             $sql .= ' AND s.created_at >= ?';
@@ -52,7 +52,7 @@ class ReportService
             $sql .= ' AND s.created_at <= ?';
             $params[] = $dateTo . ' 23:59:59';
         }
-        $sql .= ' GROUP BY consignor_id';
+        $sql .= ' GROUP BY si.consignor_id, c.name, c.custom_id';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -271,7 +271,7 @@ class ReportService
         $stmt->execute();
         $vendorsWithBooths = (int) $stmt->fetchColumn();
 
-        $stmt = $this->pdo->query('SELECT COUNT(*) FROM booths WHERE status = ?');
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM booths WHERE status = ?');
         $stmt->execute(['active']);
         $activeBooths = (int) $stmt->fetchColumn();
 
