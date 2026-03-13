@@ -79,8 +79,38 @@ final class PermissionMiddlewareTest extends TestCase
             $called = true;
         };
         $middleware = new PermissionMiddleware();
+        ob_start();
         $middleware($context, $next);
+        $out = ob_get_clean();
         $this->assertFalse($called);
+        $this->assertStringContainsString('Insufficient permissions', $out);
+    }
+
+    public function testCallsNextWhenPathMatchesPrefixWithSlash(): void
+    {
+        $context = new RequestContext();
+        $context->tenant = $this->createTenant();
+        $context->tenantUser = ['permissions' => ['inventory' => true]];
+        $context->requestUri = '/t/mystore/api/v1/items/abc-123';
+        $called = false;
+        $next = function () use (&$called) { $called = true; };
+        $middleware = new PermissionMiddleware();
+        $middleware($context, $next);
+        $this->assertTrue($called);
+    }
+
+    public function testDefaultPermissionPosWhenNoMapping(): void
+    {
+        $context = new RequestContext();
+        $context->tenant = $this->createTenant();
+        $context->tenantUser = ['permissions' => []]; // no 'pos'
+        $context->requestUri = '/t/mystore/api/v1/unknown-path';
+        $next = function () { $this->fail('Next should not be called'); };
+        $middleware = new PermissionMiddleware();
+        ob_start();
+        $middleware($context, $next);
+        $out = ob_get_clean();
+        $this->assertStringContainsString('Insufficient permissions', $out);
     }
 
     public function testCallsNextWhenNoTenantUser(): void
@@ -88,6 +118,21 @@ final class PermissionMiddlewareTest extends TestCase
         $context = new RequestContext();
         $context->tenant = $this->createTenant();
         $context->tenantUser = null;
+        $called = false;
+        $next = function () use (&$called) {
+            $called = true;
+        };
+        $middleware = new PermissionMiddleware();
+        $middleware($context, $next);
+        $this->assertTrue($called);
+    }
+
+    public function testCallsNextWhenRequestUriDoesNotMatchTenantApiPattern(): void
+    {
+        $context = new RequestContext();
+        $context->tenant = $this->createTenant();
+        $context->tenantUser = ['permissions' => []];
+        $context->requestUri = '/api/v1/health';
         $called = false;
         $next = function () use (&$called) {
             $called = true;

@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Plan;
 
 use PDO;
 
-final class PlanRepository
+class PlanRepository
 {
     public function __construct(
         private readonly PDO $pdo

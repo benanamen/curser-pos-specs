@@ -10,7 +10,11 @@ final class Bootstrap
 {
     public function boot(): HttpKernel
     {
-        $container = require dirname(__DIR__, 2) . '/config/container.php';
+        $configPath = getenv('APP_CONTAINER_FILE');
+        $path = $configPath !== false && $configPath !== ''
+            ? $configPath
+            : dirname(__DIR__, 2) . '/config/container.php';
+        $container = require $path;
         return new HttpKernel($container);
     }
 }

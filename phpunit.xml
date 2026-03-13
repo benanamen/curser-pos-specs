@@ -16,8 +16,17 @@
         <include>
             <directory>src</directory>
         </include>
+        <!-- Controllers in src/Api are intentionally excluded from coverage.
+             They are kept thin and exercised indirectly via integration tests;
+             business logic is implemented and fully covered in services,
+             domain models, repositories, and middleware. -->
         <exclude>
             <directory>src/Api</directory>
         </exclude>
     </source>
+    <coverage>
+        <report>
+            <clover outputFile="coverage.xml"/>
+        </report>
+    </coverage>
 </phpunit>

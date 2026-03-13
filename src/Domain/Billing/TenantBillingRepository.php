@@ -6,7 +6,7 @@ namespace CurserPos\Domain\Billing;
 
 use PDO;
 
-final class TenantBillingRepository
+class TenantBillingRepository
 {
     public function __construct(
         private readonly PDO $pdo

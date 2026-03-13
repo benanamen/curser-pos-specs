@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace CurserPos\Http\Middleware;
 
-use CurserPos\Domain\Tenant\TenantRepository;
+use CurserPos\Domain\Tenant\TenantRepositoryInterface;
 use CurserPos\Http\RequestContext;
 
 final class TenantResolutionMiddleware
 {
     public function __construct(
-        private readonly TenantRepository $tenantRepository,
+        private readonly TenantRepositoryInterface $tenantRepository,
         private readonly string $tenantPathPrefix = '/t/'
     ) {
     }

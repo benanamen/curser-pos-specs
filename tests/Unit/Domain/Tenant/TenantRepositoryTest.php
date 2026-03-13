@@ -140,4 +140,47 @@ class TenantRepositoryTest extends TestCase
         $tenant = $repo->findBySlug('mystore');
         $this->assertSame(['default_commission_pct' => 60], $tenant->settings);
     }
+
+    public function testListReturnsAllTenants(): void
+    {
+        $rows = [
+            [
+                'id' => 'id1',
+                'slug' => 's1',
+                'name' => 'Store 1',
+                'status' => 'active',
+                'plan_id' => 'p1',
+                'settings' => '{}',
+                'created_at' => '2025-01-01 00:00:00',
+                'updated_at' => '2025-01-01 00:00:00',
+            ],
+        ];
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetchAll')->with(\PDO::FETCH_ASSOC)->willReturn($rows);
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('query')->willReturn($stmt);
+
+        $repo = new TenantRepository($pdo);
+        $list = $repo->list();
+        $this->assertCount(1, $list);
+        $this->assertInstanceOf(Tenant::class, $list[0]);
+        $this->assertSame('s1', $list[0]->slug);
+    }
+
+    public function testUpdateCallsExecuteWithCorrectParams(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->once())->method('execute')->with($this->callback(function (array $params): bool {
+            return count($params) === 5
+                && $params[0] === 'New Name'
+                && $params[1] === 'suspended'
+                && $params[2] === 'plan-2'
+                && $params[4] === 'tenant-id';
+        }));
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new TenantRepository($pdo);
+        $repo->update('tenant-id', 'New Name', 'suspended', 'plan-2');
+    }
 }
