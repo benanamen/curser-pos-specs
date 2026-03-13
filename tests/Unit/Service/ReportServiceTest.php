@@ -154,4 +154,61 @@ final class ReportServiceTest extends TestCase
         $this->assertArrayHasKey('sales_by_vendor', $result);
         $this->assertSame(500.0, $result['rent_collected']);
     }
+
+    public function testExportSalesCsv(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetchAll')->willReturn([
+            [
+                'id' => 'sale-1',
+                'sale_number' => 'S001',
+                'subtotal' => 100.0,
+                'discount_amount' => 0.0,
+                'tax_amount' => 8.0,
+                'total' => 108.0,
+                'status' => 'completed',
+                'created_at' => '2025-01-01 12:00:00',
+            ],
+        ]);
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('query')->willReturn($stmt);
+
+        $rentRepo = $this->createMock(RentDeductionRepository::class);
+        $service = new ReportService($pdo, $rentRepo);
+
+        $csv = $service->exportSalesCsv();
+        $this->assertIsString($csv);
+        $this->assertStringContainsString('id,sale_number,subtotal,discount_amount,tax_amount,total,status,created_at', $csv);
+        $this->assertStringContainsString('sale-1', $csv);
+    }
+
+    public function testExportQuickBooksPayoutsCsv(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute');
+        $stmt->method('fetchAll')->willReturn([
+            [
+                'id' => 'p1',
+                'consignor_id' => 'c1',
+                'consignor_name' => 'Vendor One',
+                'amount' => 100.0,
+                'method' => 'check',
+                'status' => 'processed',
+                'created_at' => '2025-01-01 12:00:00',
+                'processed_at' => '2025-01-02 13:00:00',
+            ],
+        ]);
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $rentRepo = $this->createMock(RentDeductionRepository::class);
+        $service = new ReportService($pdo, $rentRepo);
+
+        $csv = $service->exportQuickBooksPayoutsCsv('2025-01-01', '2025-01-31');
+        $this->assertIsString($csv);
+        $this->assertStringContainsString('id,consignor_id,consignor_name,amount,method,status,created_at,processed_at', $csv);
+        $this->assertStringContainsString('p1', $csv);
+    }
 }
