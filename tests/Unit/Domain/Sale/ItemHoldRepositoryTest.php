@@ -22,6 +22,18 @@ final class ItemHoldRepositoryTest extends TestCase
         $repo->reserveItems('held-1', 'user-1', []);
     }
 
+    public function testReserveItemsSkipsInvalidLines(): void
+    {
+        $pdo = $this->createMock(PDO::class);
+        $pdo->expects($this->never())->method('prepare');
+
+        $repo = new ItemHoldRepository($pdo);
+        $repo->reserveItems('held-1', 'user-1', [
+            ['item_id' => '', 'quantity' => 1],
+            ['item_id' => 'item-1', 'quantity' => 0],
+        ]);
+    }
+
     public function testReserveItemsExecutesForEachItem(): void
     {
         $stmt = $this->createMock(PDOStatement::class);
