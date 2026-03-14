@@ -14,18 +14,37 @@ final class ItemHoldRepository
     }
 
     /**
-     * @param list<string> $itemIds
+     * @param list<array{item_id: string, quantity: int}> $cartLines
      */
-    public function reserveItems(string $heldId, string $userId, array $itemIds): void
+    public function reserveItems(string $heldId, string $userId, array $cartLines): void
     {
-        if ($itemIds === []) {
+        if ($cartLines === []) {
+            return;
+        }
+        $byItem = [];
+        foreach ($cartLines as $line) {
+            $itemId = isset($line['item_id']) ? (string) $line['item_id'] : '';
+            $qty = (int) ($line['quantity'] ?? 1);
+            if ($itemId !== '' && $qty > 0) {
+                $byItem[$itemId] = ($byItem[$itemId] ?? 0) + $qty;
+            }
+        }
+        if ($byItem === []) {
             return;
         }
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
-        $stmt = $this->pdo->prepare('INSERT INTO item_holds (item_id, held_id, user_id, created_at) VALUES (?, ?, ?, ?)');
-        foreach ($itemIds as $itemId) {
-            $stmt->execute([$itemId, $heldId, $userId, $now]);
+        $stmt = $this->pdo->prepare('INSERT INTO item_holds (item_id, held_id, user_id, quantity, created_at) VALUES (?, ?, ?, ?, ?)');
+        foreach ($byItem as $itemId => $quantity) {
+            $stmt->execute([$itemId, $heldId, $userId, $quantity, $now]);
         }
+    }
+
+    public function getQuantityHeld(string $itemId): int
+    {
+        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(quantity), 0) FROM item_holds WHERE item_id = ?');
+        $stmt->execute([$itemId]);
+        $row = $stmt->fetchColumn();
+        return $row !== false ? (int) $row : 0;
     }
 
     public function isReservedByHold(string $itemId, string $heldId): bool

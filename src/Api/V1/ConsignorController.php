@@ -255,6 +255,39 @@ final class ConsignorController
         ]);
     }
 
+    #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/consignors/([0-9a-fA-F-]{36})/rent-payment', ['POST'])]
+    public function recordRentPayment(string $slug, string $id): void
+    {
+        $consignor = $this->consignorRepository->findById($id);
+        if ($consignor === null) {
+            $this->json(404, ['error' => 'Consignor not found']);
+            return;
+        }
+        $context = RequestContextHolder::get();
+        $rentCycleDay = (int) ($context?->tenant?->settings['booth_rent_cycle_day'] ?? 1);
+        $rentCycleDay = max(1, min(31, $rentCycleDay));
+        $rentDue = $this->boothRentalService->getRentDue($id, null, $rentCycleDay);
+        if ($rentDue === null || $rentDue['amount'] <= 0) {
+            $this->json(400, ['error' => 'No rent due for this consignor']);
+            return;
+        }
+        $deductionId = $this->boothRentalService->recordDeduction(
+            $id,
+            $rentDue['amount'],
+            $rentDue['period_start'],
+            $rentDue['period_end'],
+            null
+        );
+        $this->json(200, [
+            'message' => 'Rent payment recorded',
+            'consignor_id' => $id,
+            'deduction_id' => $deductionId,
+            'amount' => $rentDue['amount'],
+            'period_start' => $rentDue['period_start']->format('Y-m-d'),
+            'period_end' => $rentDue['period_end']->format('Y-m-d'),
+        ]);
+    }
+
     #[Route('/t/([a-zA-Z0-9_-]+)/api/v1/consignors/([0-9a-fA-F-]{36})/rent-deductions', ['GET'])]
     public function rentDeductions(string $slug, string $id): void
     {

@@ -132,6 +132,7 @@ final class ConsignorPortalController
         $consignorSharePct = (float) ($input['consignor_share_pct'] ?? 50);
         $intakeDate = isset($input['intake_date']) ? new \DateTimeImmutable((string) $input['intake_date']) : new \DateTimeImmutable();
         $expiryDate = isset($input['expiry_date']) && $input['expiry_date'] !== '' ? new \DateTimeImmutable((string) $input['expiry_date']) : null;
+        $quantity = isset($input['quantity']) ? max(1, (int) $input['quantity']) : 1;
 
         if ($price <= 0) {
             $this->json(400, ['error' => 'Price must be greater than 0']);
@@ -139,7 +140,7 @@ final class ConsignorPortalController
         }
 
         try {
-            $item = $this->inventoryService->createItem($sku, $barcode, $context->consignor->id, $categoryId, null, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $intakeDate, $expiryDate, $context->tenant->id);
+            $item = $this->inventoryService->createItem($sku, $barcode, $context->consignor->id, $categoryId, null, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $intakeDate, $expiryDate, $context->tenant->id, $quantity);
             $this->json(201, $this->itemToArray($item));
         } catch (\InvalidArgumentException $e) {
             $this->json(400, ['error' => $e->getMessage()]);
@@ -194,7 +195,7 @@ final class ConsignorPortalController
             return;
         }
 
-        $this->itemRepository->update($id, $item->sku, $item->barcode, $item->consignorId, $item->categoryId, $item->locationId, $description, $size, $condition, $price, $item->storeSharePct, $item->consignorSharePct, $item->expiryDate);
+        $this->itemRepository->update($id, $item->sku, $item->barcode, $item->consignorId, $item->categoryId, $item->locationId, $description, $size, $condition, $price, $item->storeSharePct, $item->consignorSharePct, $item->expiryDate, null);
         $updated = $this->itemRepository->findById($id);
         $this->json(200, $updated !== null ? $this->itemToArray($updated) : []);
     }

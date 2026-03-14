@@ -40,6 +40,7 @@ final class InventoryServiceTest extends TestCase
             50.0,
             50.0,
             Item::STATUS_AVAILABLE,
+            1,
             new \DateTimeImmutable(),
             null,
             new \DateTimeImmutable(),

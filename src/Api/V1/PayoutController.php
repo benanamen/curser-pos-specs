@@ -30,8 +30,9 @@ final class PayoutController
         $method = (string) ($input['method'] ?? 'check');
         $rentCycleDay = (int) ($context?->tenant?->settings['booth_rent_cycle_day'] ?? 1);
         $rentCycleDay = max(1, min(31, $rentCycleDay));
+        $deductRentFromPayout = (bool) ($context?->tenant?->settings['booth_rent_deduct_from_payout'] ?? true);
 
-        $results = $this->payoutService->runPayoutRun($consignorIds, $minimumAmount, $method, $rentCycleDay);
+        $results = $this->payoutService->runPayoutRun($consignorIds, $minimumAmount, $method, $rentCycleDay, $deductRentFromPayout);
         $this->auditService->log(
             $context?->tenant?->id,
             $context?->user?->id,
@@ -52,7 +53,8 @@ final class PayoutController
         $minimumAmount = isset($_GET['minimum_amount']) ? (float) $_GET['minimum_amount'] : 0.0;
         $rentCycleDay = (int) ($context?->tenant?->settings['booth_rent_cycle_day'] ?? 1);
         $rentCycleDay = max(1, min(31, $rentCycleDay));
-        $rows = $this->payoutService->previewPayoutRun($minimumAmount, $rentCycleDay);
+        $deductRentFromPayout = (bool) ($context?->tenant?->settings['booth_rent_deduct_from_payout'] ?? true);
+        $rows = $this->payoutService->previewPayoutRun($minimumAmount, $rentCycleDay, $deductRentFromPayout);
         $this->json(200, ['preview' => $rows]);
     }
 

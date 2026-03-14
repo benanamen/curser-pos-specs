@@ -90,6 +90,7 @@ final class InventoryController
         $consignorSharePct = (float) ($input['consignor_share_pct'] ?? 50);
         $intakeDate = isset($input['intake_date']) ? new \DateTimeImmutable((string) $input['intake_date']) : new \DateTimeImmutable();
         $expiryDate = isset($input['expiry_date']) && $input['expiry_date'] !== '' ? new \DateTimeImmutable((string) $input['expiry_date']) : null;
+        $quantity = isset($input['quantity']) ? max(1, (int) $input['quantity']) : 1;
 
         if ($price <= 0) {
             $this->json(400, ['error' => 'Price must be greater than 0']);
@@ -99,7 +100,7 @@ final class InventoryController
         $tenantId = RequestContextHolder::get()?->tenant?->id;
 
         try {
-            $item = $this->inventoryService->createItem($sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $intakeDate, $expiryDate, $tenantId);
+            $item = $this->inventoryService->createItem($sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $intakeDate, $expiryDate, $tenantId, $quantity);
             $this->json(201, $this->itemToArray($item));
         } catch (\InvalidArgumentException $e) {
             $this->json(400, ['error' => $e->getMessage()]);
@@ -127,13 +128,14 @@ final class InventoryController
         $storeSharePct = array_key_exists('store_share_pct', $input) ? (float) $input['store_share_pct'] : $item->storeSharePct;
         $consignorSharePct = array_key_exists('consignor_share_pct', $input) ? (float) $input['consignor_share_pct'] : $item->consignorSharePct;
         $expiryDate = array_key_exists('expiry_date', $input) ? ($input['expiry_date'] !== '' ? new \DateTimeImmutable((string) $input['expiry_date']) : null) : $item->expiryDate;
+        $quantity = array_key_exists('quantity', $input) ? max(0, (int) $input['quantity']) : null;
 
         if ($this->itemRepository->skuExists($sku, $id)) {
             $this->json(400, ['error' => 'SKU already exists']);
             return;
         }
 
-        $this->itemRepository->update($id, $sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $expiryDate);
+        $this->itemRepository->update($id, $sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $expiryDate, $quantity);
         $updated = $this->itemRepository->findById($id);
         $this->json(200, $updated !== null ? $this->itemToArray($updated) : []);
     }
@@ -248,7 +250,7 @@ final class InventoryController
      */
     private function itemToArray(object $item): array
     {
-        return [
+        $arr = [
             'id' => $item->id,
             'sku' => $item->sku,
             'barcode' => $item->barcode,
@@ -262,11 +264,14 @@ final class InventoryController
             'store_share_pct' => $item->storeSharePct,
             'consignor_share_pct' => $item->consignorSharePct,
             'status' => $item->status,
+            'quantity' => $item->quantity,
             'intake_date' => $item->intakeDate->format('Y-m-d'),
             'expiry_date' => $item->expiryDate?->format('Y-m-d'),
             'created_at' => $item->createdAt->format(\DateTimeInterface::ATOM),
             'updated_at' => $item->updatedAt->format(\DateTimeInterface::ATOM),
         ];
+        $arr['available_quantity'] = $this->itemRepository->getAvailableQuantity($item->id);
+        return $arr;
     }
 
     /**

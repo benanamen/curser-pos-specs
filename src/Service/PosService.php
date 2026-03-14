@@ -86,9 +86,6 @@ final class PosService
             if ($itemId === '' || $quantity < 1) {
                 continue;
             }
-            if ($quantity > 1) {
-                throw new \InvalidArgumentException('Quantity for an item cannot exceed available inventory');
-            }
             if ($lineDiscount < 0) {
                 throw new \InvalidArgumentException('Item discount cannot be negative');
             }
@@ -96,12 +93,12 @@ final class PosService
             if ($item === null) {
                 throw new \InvalidArgumentException("Item not found: {$itemId}");
             }
-            if ($item->status !== Item::STATUS_AVAILABLE) {
-                if ($heldId !== null && $item->status === Item::STATUS_HELD && $this->itemHoldRepository->isReservedByHold($item->id, $heldId)) {
-                    // allowed: item reserved for this hold
-                } else {
+            $available = $this->itemRepository->getAvailableQuantity($itemId);
+            if ($quantity > $available) {
+                throw new \InvalidArgumentException("Item {$item->sku}: requested quantity {$quantity} exceeds available ({$available})");
+            }
+            if ($item->status !== Item::STATUS_AVAILABLE && ($heldId === null || !$this->itemHoldRepository->isReservedByHold($item->id, $heldId))) {
                 throw new \InvalidArgumentException("Item {$item->sku} is not available for sale");
-                }
             }
             $lineBeforeDiscount = $item->price * $quantity;
             if ($lineDiscount > $lineBeforeDiscount) {
@@ -136,8 +133,8 @@ final class PosService
         foreach ($payments as $p) {
             $paymentTotal += (float) ($p['amount'] ?? 0);
         }
-        if (abs($paymentTotal - $total) > 0.01) {
-            throw new \InvalidArgumentException('Payment total does not match sale total');
+        if ($paymentTotal < $total - 0.01) {
+            throw new \InvalidArgumentException('Payment total is less than sale total');
         }
 
         $cardReferences = [];
@@ -165,7 +162,7 @@ final class PosService
         foreach ($lineItems as $line) {
             $item = $line['item'];
             $this->saleRepository->addSaleItem($saleId, $item->id, $item->consignorId, $line['quantity'], $line['unit_price'], $line['discount_amount'], 0, $line['store_share'], $line['consignor_share']);
-            $this->itemRepository->updateStatus($item->id, Item::STATUS_SOLD);
+            $this->itemRepository->decreaseQuantity($item->id, $line['quantity']);
             if ($item->consignorId !== null) {
                 $this->consignorService->recordManualAdjustment($item->consignorId, $line['consignor_share'], 'Sale ' . $saleId);
             }
@@ -248,31 +245,26 @@ final class PosService
         if ($cart === []) {
             throw new \InvalidArgumentException('Cart cannot be empty');
         }
-        $itemIds = [];
         foreach ($cart as $entry) {
             $itemId = isset($entry['item_id']) ? (string) $entry['item_id'] : '';
-            if ($itemId !== '') {
-                $itemIds[] = $itemId;
+            $quantity = (int) ($entry['quantity'] ?? 1);
+            if ($itemId === '' || $quantity < 1) {
+                continue;
             }
-        }
-        if ($itemIds === []) {
-            throw new \InvalidArgumentException('Cart cannot be empty');
+            $item = $this->itemRepository->findById($itemId);
+            if ($item === null) {
+                throw new \InvalidArgumentException("Item not found: {$itemId}");
+            }
+            $available = $this->itemRepository->getAvailableQuantity($itemId);
+            if ($quantity > $available) {
+                throw new \InvalidArgumentException("Item {$item->sku}: quantity {$quantity} exceeds available ({$available})");
+            }
         }
 
         $this->pdo->beginTransaction();
         try {
-            foreach ($itemIds as $itemId) {
-                $item = $this->itemRepository->findById($itemId);
-                if ($item === null) {
-                    throw new \InvalidArgumentException("Item not found: {$itemId}");
-                }
-                if ($item->status !== Item::STATUS_AVAILABLE) {
-                    throw new \InvalidArgumentException("Item {$item->sku} is not available to hold");
-                }
-            }
             $heldId = $this->heldSaleRepository->create($userId, ['cart' => $cart, 'payments' => $payments]);
-            $this->itemHoldRepository->reserveItems($heldId, $userId, $itemIds);
-            $this->itemRepository->updateStatusForIds($itemIds, Item::STATUS_HELD);
+            $this->itemHoldRepository->reserveItems($heldId, $userId, $cart);
             $this->pdo->commit();
             return $heldId;
         } catch (\Throwable $e) {
@@ -333,27 +325,8 @@ final class PosService
         if (isset($held['user_id']) && (string) $held['user_id'] !== $userId) {
             throw new \InvalidArgumentException('Held sale does not belong to current user');
         }
-        $itemIds = $this->itemHoldRepository->listItemIdsByHold($heldId);
-        // #region agent log
-        file_put_contents(
-            'debug-a0f689.log',
-            json_encode([
-                'sessionId' => 'a0f689',
-                'runId' => 'pre-fix',
-                'hypothesisId' => 'H_release',
-                'location' => 'PosService::releaseHold',
-                'message' => 'Releasing held sale',
-                'data' => ['heldId' => $heldId, 'userId' => $userId, 'itemIds' => $itemIds],
-                'timestamp' => (int) (microtime(true) * 1000),
-            ]) . PHP_EOL,
-            FILE_APPEND
-        );
-        // #endregion
         $this->pdo->beginTransaction();
         try {
-            if ($itemIds !== []) {
-                $this->itemRepository->updateStatusForIds($itemIds, Item::STATUS_AVAILABLE);
-            }
             $this->itemHoldRepository->deleteByHold($heldId);
             $this->heldSaleRepository->delete($heldId);
             $this->pdo->commit();
@@ -384,7 +357,10 @@ final class PosService
         $items = $this->saleRepository->getSaleItems($saleId);
         foreach ($items as $row) {
             if (isset($row['item_id']) && $row['item_id'] !== null && $row['item_id'] !== '') {
-                $this->itemRepository->updateStatus($row['item_id'], Item::STATUS_AVAILABLE);
+                $qty = (int) ($row['quantity'] ?? 1);
+                if ($qty > 0) {
+                    $this->itemRepository->increaseQuantity((string) $row['item_id'], $qty);
+                }
             }
             if (isset($row['consignor_id']) && $row['consignor_id'] !== null && $row['consignor_id'] !== '') {
                 $share = (float) ($row['consignor_share'] ?? 0);

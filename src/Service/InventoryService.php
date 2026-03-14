@@ -30,13 +30,14 @@ final class InventoryService
         float $consignorSharePct,
         \DateTimeImmutable $intakeDate,
         ?\DateTimeImmutable $expiryDate = null,
-        ?string $tenantId = null
+        ?string $tenantId = null,
+        int $quantity = 1
     ): Item {
         $this->enforceItemLimit($tenantId);
         if ($this->itemRepository->skuExists($sku)) {
             throw new \InvalidArgumentException("SKU '{$sku}' already exists");
         }
-        $id = $this->itemRepository->create($sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $intakeDate, $expiryDate);
+        $id = $this->itemRepository->create($sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $intakeDate, $expiryDate, $quantity);
         $item = $this->itemRepository->findById($id);
         if ($item === null) {
             throw new \RuntimeException('Failed to create item');

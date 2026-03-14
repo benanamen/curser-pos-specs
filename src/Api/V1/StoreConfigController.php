@@ -49,6 +49,7 @@ final class StoreConfigController
             'expiration_days' => $settings['expiration_days'] ?? 90,
             'booth_rent_cycle_day' => $boothRentCycleDay,
             'booth_rentals_enabled' => $boothRentalsEnabled,
+            'booth_rent_deduct_from_payout' => (bool) ($settings['booth_rent_deduct_from_payout'] ?? true),
             'receipt_footer_text' => $settings['receipt_footer_text'] ?? null,
         ]);
     }
@@ -147,6 +148,9 @@ final class StoreConfigController
         if (array_key_exists('booth_rentals_enabled', $input)) {
             $settings['booth_rentals_enabled'] = (bool) $input['booth_rentals_enabled'];
         }
+        if (array_key_exists('booth_rent_deduct_from_payout', $input)) {
+            $settings['booth_rent_deduct_from_payout'] = (bool) $input['booth_rent_deduct_from_payout'];
+        }
         if (array_key_exists('receipt_footer_text', $input)) {
             $settings['receipt_footer_text'] = $input['receipt_footer_text'] !== '' && $input['receipt_footer_text'] !== null ? (string) $input['receipt_footer_text'] : null;
         }
@@ -188,6 +192,7 @@ final class StoreConfigController
             'expiration_days' => $settings['expiration_days'] ?? 90,
             'booth_rent_cycle_day' => $boothRentCycleDay,
             'booth_rentals_enabled' => $boothRentalsEnabled,
+            'booth_rent_deduct_from_payout' => (bool) ($settings['booth_rent_deduct_from_payout'] ?? true),
             'receipt_footer_text' => $settings['receipt_footer_text'] ?? null,
         ]);
     }

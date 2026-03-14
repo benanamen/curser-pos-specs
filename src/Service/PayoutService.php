@@ -18,12 +18,12 @@ final class PayoutService
     }
 
     /**
-     * Run payouts for consignors with balance >= minimum. Deducts booth rent first when applicable, then pays remainder.
+     * Run payouts for consignors with balance >= minimum. When deductRentFromPayout is true, deducts booth rent first when applicable, then pays remainder.
      *
      * @param list<string> $consignorIds Optional; if empty, all consignors with balance >= minimum
      * @return list<array{payout_id: string, consignor_id: string, amount: float, rent_deducted: float, method: string}>
      */
-    public function runPayoutRun(array $consignorIds, float $minimumAmount, string $method = 'check', int $rentCycleDay = 1): array
+    public function runPayoutRun(array $consignorIds, float $minimumAmount, string $method = 'check', int $rentCycleDay = 1, bool $deductRentFromPayout = true): array
     {
         $method = in_array($method, ['check', 'cash', 'store_credit', 'ach'], true) ? $method : 'check';
         $rentCycleDay = max(1, min(31, $rentCycleDay));
@@ -37,11 +37,16 @@ final class PayoutService
             $balance = $this->consignorService->getBalance($consignor->id);
             $rentDue = $this->boothRentalService->getRentDue($consignor->id, null, $rentCycleDay);
             $rentAmount = $rentDue !== null ? $rentDue['amount'] : 0.0;
-            $payoutAmountCandidate = $balance->balance - $rentAmount;
-            $payoutAmount = round(max($payoutAmountCandidate, 0.0), 2);
+
+            if ($deductRentFromPayout) {
+                $payoutAmountCandidate = $balance->balance - $rentAmount;
+                $payoutAmount = round(max($payoutAmountCandidate, 0.0), 2);
+            } else {
+                $payoutAmount = round(max($balance->balance, 0.0), 2);
+            }
 
             if ($payoutAmount >= $minimumAmount) {
-                if ($rentAmount > 0 && $rentDue !== null) {
+                if ($deductRentFromPayout && $rentAmount > 0 && $rentDue !== null) {
                     $payoutId = $this->payoutRepository->create($consignor->id, $payoutAmount, $method);
                     $this->boothRentalService->recordDeduction(
                         $consignor->id,
@@ -59,6 +64,18 @@ final class PayoutService
                         'rent_deducted' => $rentAmount,
                         'method' => $method,
                     ];
+                } elseif ($deductRentFromPayout) {
+                    $amount = round($balance->balance, 2);
+                    $payoutId = $this->payoutRepository->create($consignor->id, $amount, $method);
+                    $this->consignorService->deductForPayout($consignor->id, $amount);
+                    $this->payoutRepository->markProcessed($payoutId);
+                    $results[] = [
+                        'payout_id' => $payoutId,
+                        'consignor_id' => $consignor->id,
+                        'amount' => $amount,
+                        'rent_deducted' => 0.0,
+                        'method' => $method,
+                    ];
                 } else {
                     $amount = round($balance->balance, 2);
                     $payoutId = $this->payoutRepository->create($consignor->id, $amount, $method);
@@ -72,8 +89,7 @@ final class PayoutService
                         'method' => $method,
                     ];
                 }
-            } elseif ($rentAmount > 0 && $rentDue !== null) {
-                // No payout (below minimum), but rent is still due and must be recorded and deducted.
+            } elseif ($deductRentFromPayout && $rentAmount > 0 && $rentDue !== null) {
                 $this->boothRentalService->recordDeduction(
                     $consignor->id,
                     $rentAmount,
@@ -93,7 +109,7 @@ final class PayoutService
      *
      * @return list<array{consignor_id: string, name: string, balance: float, rent_due: float, payout_amount: float}>
      */
-    public function previewPayoutRun(float $minimumAmount, int $rentCycleDay = 1): array
+    public function previewPayoutRun(float $minimumAmount, int $rentCycleDay = 1, bool $deductRentFromPayout = true): array
     {
         $rentCycleDay = max(1, min(31, $rentCycleDay));
         $consignors = $this->consignorRepository->findAll('active');
@@ -103,7 +119,9 @@ final class PayoutService
             $balance = $this->consignorService->getBalance($consignor->id);
             $rentDue = $this->boothRentalService->getRentDue($consignor->id, null, $rentCycleDay);
             $rentAmount = $rentDue !== null ? $rentDue['amount'] : 0.0;
-            $payoutAmount = round($balance->balance - $rentAmount, 2);
+            $payoutAmount = $deductRentFromPayout
+                ? round($balance->balance - $rentAmount, 2)
+                : round($balance->balance, 2);
 
             if ($payoutAmount < $minimumAmount) {
                 continue;

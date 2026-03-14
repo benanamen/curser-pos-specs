@@ -17,7 +17,7 @@ class ItemRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, sku, barcode, consignor_id, category_id, location_id, description, size, condition,
-                    price, store_share_pct, consignor_share_pct, status, intake_date, expiry_date, created_at, updated_at
+                    price, store_share_pct, consignor_share_pct, status, quantity, intake_date, expiry_date, created_at, updated_at
              FROM items WHERE id = ?'
         );
         $stmt->execute([$id]);
@@ -29,7 +29,7 @@ class ItemRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, sku, barcode, consignor_id, category_id, location_id, description, size, condition,
-                    price, store_share_pct, consignor_share_pct, status, intake_date, expiry_date, created_at, updated_at
+                    price, store_share_pct, consignor_share_pct, status, quantity, intake_date, expiry_date, created_at, updated_at
              FROM items WHERE sku = ?'
         );
         $stmt->execute([$sku]);
@@ -41,7 +41,7 @@ class ItemRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, sku, barcode, consignor_id, category_id, location_id, description, size, condition,
-                    price, store_share_pct, consignor_share_pct, status, intake_date, expiry_date, created_at, updated_at
+                    price, store_share_pct, consignor_share_pct, status, quantity, intake_date, expiry_date, created_at, updated_at
              FROM items WHERE barcode = ? AND status = ?'
         );
         $stmt->execute([$barcode, Item::STATUS_AVAILABLE]);
@@ -54,37 +54,55 @@ class ItemRepository
      */
     public function search(?string $q = null, ?string $status = null, ?string $consignorId = null, ?string $categoryId = null, int $limit = 50): array
     {
-        $sql = 'SELECT id, sku, barcode, consignor_id, category_id, location_id, description, size, condition,
-                       price, store_share_pct, consignor_share_pct, status, intake_date, expiry_date, created_at, updated_at
-                FROM items WHERE 1=1';
         $params = [];
-
+        $where = '1=1';
         if ($q !== null && $q !== '') {
-            $sql .= ' AND (sku ILIKE ? OR description ILIKE ? OR barcode ILIKE ?)';
+            $where .= ' AND (sku ILIKE ? OR description ILIKE ? OR barcode ILIKE ?)';
             $p = '%' . $q . '%';
             $params[] = $p;
             $params[] = $p;
             $params[] = $p;
         }
         if ($status !== null && $status !== '') {
-            $sql .= ' AND status = ?';
+            $where .= ' AND status = ?';
             $params[] = $status;
         }
         if ($consignorId !== null && $consignorId !== '') {
-            $sql .= ' AND consignor_id = ?';
+            $where .= ' AND consignor_id = ?';
             $params[] = $consignorId;
         }
         if ($categoryId !== null && $categoryId !== '') {
-            $sql .= ' AND category_id = ?';
+            $where .= ' AND category_id = ?';
             $params[] = $categoryId;
         }
 
-        $sql .= ' ORDER BY created_at DESC LIMIT ' . (int) $limit;
+        $orderLimit = ' ORDER BY created_at DESC LIMIT ' . (int) $limit;
+        $columnsWithQuantity = 'id, sku, barcode, consignor_id, category_id, location_id, description, size, condition,
+                       price, store_share_pct, consignor_share_pct, status, quantity, intake_date, expiry_date, created_at, updated_at';
+        $sql = 'SELECT ' . $columnsWithQuantity . ' FROM items WHERE ' . $where . $orderLimit;
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return array_map(fn (array $r) => $this->hydrate($r), $rows);
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return array_map(fn (array $r) => $this->hydrate($r), $rows);
+        } catch (\PDOException $e) {
+            $code = $e->getCode();
+            $msg = $e->getMessage();
+            $quantityColumnMissing = str_contains($msg, 'quantity') && (
+                $code === '42S22' || str_contains($msg, 'Unknown column') || str_contains($msg, 'undefined_column') || $code === '42703'
+            );
+            if (!$quantityColumnMissing) {
+                throw $e;
+            }
+            $columnsFallback = 'id, sku, barcode, consignor_id, category_id, location_id, description, size, condition,
+                       price, store_share_pct, consignor_share_pct, status, 1 AS quantity, intake_date, expiry_date, created_at, updated_at';
+            $sqlFallback = 'SELECT ' . $columnsFallback . ' FROM items WHERE ' . $where . $orderLimit;
+            $stmt = $this->pdo->prepare($sqlFallback);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return array_map(fn (array $r) => $this->hydrate($r), $rows);
+        }
     }
 
     public function skuExists(string $sku, ?string $excludeId = null): bool
@@ -112,7 +130,8 @@ class ItemRepository
         float $storeSharePct,
         float $consignorSharePct,
         \DateTimeImmutable $intakeDate,
-        ?\DateTimeImmutable $expiryDate = null
+        ?\DateTimeImmutable $expiryDate = null,
+        int $quantity = 1
     ): string {
         $id = $this->generateUuid();
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
@@ -121,12 +140,12 @@ class ItemRepository
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO items (id, sku, barcode, consignor_id, category_id, location_id, description, size, condition,
-                               price, store_share_pct, consignor_share_pct, status, intake_date, expiry_date, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?::date, ?, ?)'
+                               price, store_share_pct, consignor_share_pct, status, quantity, intake_date, expiry_date, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?::date, ?, ?)'
         );
         $stmt->execute([
             $id, $sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition,
-            $price, $storeSharePct, $consignorSharePct, Item::STATUS_AVAILABLE, $intake, $expiry, $now, $now
+            $price, $storeSharePct, $consignorSharePct, Item::STATUS_AVAILABLE, max(1, $quantity), $intake, $expiry, $now, $now
         ]);
         return $id;
     }
@@ -144,17 +163,27 @@ class ItemRepository
         float $price,
         float $storeSharePct,
         float $consignorSharePct,
-        ?\DateTimeImmutable $expiryDate
+        ?\DateTimeImmutable $expiryDate,
+        ?int $quantity = null
     ): void {
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $expiry = $expiryDate?->format('Y-m-d');
 
-        $stmt = $this->pdo->prepare(
-            'UPDATE items SET sku = ?, barcode = ?, consignor_id = ?, category_id = ?, location_id = ?, description = ?,
-                             size = ?, condition = ?, price = ?, store_share_pct = ?, consignor_share_pct = ?,
-                             expiry_date = ?::date, updated_at = ? WHERE id = ?'
-        );
-        $stmt->execute([$sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $expiry, $now, $id]);
+        if ($quantity !== null) {
+            $stmt = $this->pdo->prepare(
+                'UPDATE items SET sku = ?, barcode = ?, consignor_id = ?, category_id = ?, location_id = ?, description = ?,
+                                 size = ?, condition = ?, price = ?, store_share_pct = ?, consignor_share_pct = ?,
+                                 expiry_date = ?::date, quantity = ?, updated_at = ? WHERE id = ?'
+            );
+            $stmt->execute([$sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $expiry, max(0, $quantity), $now, $id]);
+        } else {
+            $stmt = $this->pdo->prepare(
+                'UPDATE items SET sku = ?, barcode = ?, consignor_id = ?, category_id = ?, location_id = ?, description = ?,
+                                 size = ?, condition = ?, price = ?, store_share_pct = ?, consignor_share_pct = ?,
+                                 expiry_date = ?::date, updated_at = ? WHERE id = ?'
+            );
+            $stmt->execute([$sku, $barcode, $consignorId, $categoryId, $locationId, $description, $size, $condition, $price, $storeSharePct, $consignorSharePct, $expiry, $now, $id]);
+        }
     }
 
     public function updatePrice(string $id, float $price): void
@@ -205,6 +234,43 @@ class ItemRepository
         return (int) $stmt->fetchColumn();
     }
 
+    public function decreaseQuantity(string $id, int $by): void
+    {
+        if ($by < 1) {
+            return;
+        }
+        $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+        $stmt = $this->pdo->prepare('UPDATE items SET quantity = GREATEST(0, quantity - ?), updated_at = ? WHERE id = ?');
+        $stmt->execute([$by, $now, $id]);
+        $stmt = $this->pdo->prepare('UPDATE items SET status = ? WHERE id = ? AND quantity = 0');
+        $stmt->execute([Item::STATUS_SOLD, $id]);
+    }
+
+    public function increaseQuantity(string $id, int $by): void
+    {
+        if ($by < 1) {
+            return;
+        }
+        $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+        $stmt = $this->pdo->prepare('UPDATE items SET quantity = quantity + ?, status = ?, updated_at = ? WHERE id = ?');
+        $stmt->execute([$by, Item::STATUS_AVAILABLE, $now, $id]);
+    }
+
+    public function getAvailableQuantity(string $itemId): int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT i.quantity - COALESCE((SELECT SUM(h.quantity) FROM item_holds h WHERE h.item_id = i.id), 0)
+             FROM items i WHERE i.id = ?'
+        );
+        $stmt->execute([$itemId]);
+        $row = $stmt->fetchColumn();
+        if ($row === false) {
+            return 0;
+        }
+        $available = (int) $row;
+        return $available > 0 ? $available : 0;
+    }
+
     /**
      * @param array<string, mixed> $row
      */
@@ -228,6 +294,7 @@ class ItemRepository
             (float) $row['store_share_pct'],
             (float) $row['consignor_share_pct'],
             (string) $row['status'],
+            isset($row['quantity']) ? (int) $row['quantity'] : 1,
             new \DateTimeImmutable((string) $row['intake_date']),
             $expiry,
             new \DateTimeImmutable((string) $row['created_at']),

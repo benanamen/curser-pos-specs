@@ -28,6 +28,7 @@ final class ItemRepositoryTest extends TestCase
             'store_share_pct' => 50.0,
             'consignor_share_pct' => 50.0,
             'status' => Item::STATUS_AVAILABLE,
+            'quantity' => 1,
             'intake_date' => '2025-01-01',
             'expiry_date' => '2025-06-01',
             'created_at' => '2025-01-01 00:00:00',
@@ -63,6 +64,7 @@ final class ItemRepositoryTest extends TestCase
         $this->assertInstanceOf(Item::class, $item);
         $this->assertSame('item-1', $item->id);
         $this->assertSame(Item::STATUS_AVAILABLE, $item->status);
+        $this->assertSame(1, $item->quantity);
     }
 
     public function testFindBySkuReturnsNullWhenNotFound(): void
@@ -152,7 +154,7 @@ final class ItemRepositoryTest extends TestCase
     {
         $stmt = $this->createMock(PDOStatement::class);
         $stmt->expects($this->once())->method('execute')->with($this->callback(function (array $params): bool {
-            return $params[1] === 'SKU1' && (float) $params[9] === 25.0 && $params[12] === Item::STATUS_AVAILABLE && count($params) === 17;
+            return $params[1] === 'SKU1' && (float) $params[9] === 25.0 && $params[12] === Item::STATUS_AVAILABLE && $params[13] === 1 && count($params) === 18;
         }));
 
         $pdo = $this->createMock(PDO::class);
@@ -160,6 +162,21 @@ final class ItemRepositoryTest extends TestCase
 
         $repo = new ItemRepository($pdo);
         $id = $repo->create('SKU1', null, 'cons-1', 'cat-1', null, null, null, null, 25.0, 50.0, 50.0, new \DateTimeImmutable('2025-01-01'), null);
+        $this->assertNotEmpty($id);
+    }
+
+    public function testCreateWithQuantity(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->once())->method('execute')->with($this->callback(function (array $params): bool {
+            return $params[13] === 5;
+        }));
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new ItemRepository($pdo);
+        $id = $repo->create('SKU1', null, 'cons-1', 'cat-1', null, null, null, null, 25.0, 50.0, 50.0, new \DateTimeImmutable('2025-01-01'), null, 5);
         $this->assertNotEmpty($id);
     }
 
@@ -174,7 +191,21 @@ final class ItemRepositoryTest extends TestCase
         $pdo->method('prepare')->willReturn($stmt);
 
         $repo = new ItemRepository($pdo);
-        $repo->update('item-1', 'SKU2', null, null, null, null, null, null, null, 30.0, 50.0, 50.0, new \DateTimeImmutable('2025-06-01'));
+        $repo->update('item-1', 'SKU2', null, null, null, null, null, null, null, 30.0, 50.0, 50.0, new \DateTimeImmutable('2025-06-01'), null);
+    }
+
+    public function testUpdateWithQuantity(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->once())->method('execute')->with($this->callback(function (array $params): bool {
+            return $params[12] === 10 && $params[14] === 'item-1' && count($params) === 15;
+        }));
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new ItemRepository($pdo);
+        $repo->update('item-1', 'SKU2', null, null, null, null, null, null, null, 30.0, 50.0, 50.0, new \DateTimeImmutable('2025-06-01'), 10);
     }
 
     public function testUpdatePriceExecutes(): void
@@ -251,5 +282,59 @@ final class ItemRepositoryTest extends TestCase
 
         $repo = new ItemRepository($pdo);
         $this->assertSame(5, $repo->countActiveByConsignor('cons-1'));
+    }
+
+    public function testDecreaseQuantityExecutes(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->exactly(2))->method('execute')->with($this->callback(function (array $params): bool {
+            return ($params[0] === 2 && $params[2] === 'item-1') || ($params[0] === Item::STATUS_SOLD && $params[1] === 'item-1');
+        }));
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new ItemRepository($pdo);
+        $repo->decreaseQuantity('item-1', 2);
+    }
+
+    public function testIncreaseQuantityExecutes(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->expects($this->once())->method('execute')->with($this->callback(function (array $params): bool {
+            return $params[0] === 3 && $params[1] === Item::STATUS_AVAILABLE && $params[3] === 'item-1';
+        }));
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new ItemRepository($pdo);
+        $repo->increaseQuantity('item-1', 3);
+    }
+
+    public function testGetAvailableQuantityReturnsValue(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->with($this->equalTo(['item-1']));
+        $stmt->method('fetchColumn')->willReturn(7);
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new ItemRepository($pdo);
+        $this->assertSame(7, $repo->getAvailableQuantity('item-1'));
+    }
+
+    public function testGetAvailableQuantityReturnsZeroWhenNull(): void
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->with($this->equalTo(['item-1']));
+        $stmt->method('fetchColumn')->willReturn(null);
+
+        $pdo = $this->createMock(PDO::class);
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $repo = new ItemRepository($pdo);
+        $this->assertSame(0, $repo->getAvailableQuantity('item-1'));
     }
 }

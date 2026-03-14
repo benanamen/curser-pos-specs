@@ -29,7 +29,8 @@ final class PosServiceTest extends TestCase
         float $price = 25.0,
         float $storeSharePct = 50.0,
         float $consignorSharePct = 50.0,
-        string $status = Item::STATUS_AVAILABLE
+        string $status = Item::STATUS_AVAILABLE,
+        int $quantity = 1
     ): Item {
         $now = new \DateTimeImmutable();
         return new Item(
@@ -46,6 +47,7 @@ final class PosServiceTest extends TestCase
             $storeSharePct,
             $consignorSharePct,
             $status,
+            $quantity,
             $now,
             null,
             $now,
@@ -62,7 +64,7 @@ final class PosServiceTest extends TestCase
     public function testCheckoutThrowsWhenCartEmpty(): void
     {
         $pdo = new \PDO('sqlite::memory:');
-        $pdo->exec('CREATE TABLE item_holds (item_id TEXT, held_id TEXT, user_id TEXT, created_at TEXT)');
+        $pdo->exec('CREATE TABLE item_holds (item_id TEXT, held_id TEXT, user_id TEXT, quantity INTEGER NOT NULL DEFAULT 1, created_at TEXT)');
         $saleRepo = $this->createMock(SaleRepository::class);
         $paymentRepo = $this->createMock(PaymentRepository::class);
         $itemRepo = $this->createMock(ItemRepository::class);
@@ -96,6 +98,7 @@ final class PosServiceTest extends TestCase
         $item = $this->createItem(status: Item::STATUS_SOLD);
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
 
         $service = $this->createPosService(['itemRepository' => $itemRepo]);
         $this->expectException(\InvalidArgumentException::class);
@@ -108,10 +111,11 @@ final class PosServiceTest extends TestCase
         $item = $this->createItem();
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
 
         $service = $this->createPosService(['itemRepository' => $itemRepo]);
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Payment total does not match sale total');
+        $this->expectExceptionMessage('Payment total is less than sale total');
         $service->checkout('user-1', null, null, [['item_id' => 'item-1', 'quantity' => 1]], [['method' => 'cash', 'amount' => 10.0]]);
     }
 
@@ -121,7 +125,8 @@ final class PosServiceTest extends TestCase
         $sale = $this->createSale();
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
-        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_SOLD);
+        $itemRepo->method('getAvailableQuantity')->with('item-1')->willReturn(1);
+        $itemRepo->expects($this->once())->method('decreaseQuantity')->with('item-1', 1);
 
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('create')->willReturn('sale-1');
@@ -152,6 +157,7 @@ final class PosServiceTest extends TestCase
         $sale = $this->createSale(total: 100.0);
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
 
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('create')->willReturn('sale-1');
@@ -188,6 +194,7 @@ final class PosServiceTest extends TestCase
         $sale = $this->createSale();
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
 
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('create')->willReturn('sale-1');
@@ -210,6 +217,7 @@ final class PosServiceTest extends TestCase
         $sale = $this->createSale();
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
 
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('create')->willReturn('sale-1');
@@ -303,6 +311,7 @@ final class PosServiceTest extends TestCase
         $item = $this->createItem(id: 'i1');
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->with('i1')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->with('i1')->willReturn(1);
 
         $heldRepo = $this->createMock(HeldSaleRepository::class);
         $heldRepo->method('create')->willReturn('held-1');
@@ -376,6 +385,8 @@ final class PosServiceTest extends TestCase
 
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
+        $itemRepo->expects($this->once())->method('decreaseQuantity')->with('item-1', 1);
 
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('create')->willReturn('sale-1');
@@ -417,7 +428,7 @@ final class PosServiceTest extends TestCase
     {
         $sale = $this->createSale(total: 50.0);
         $saleItems = [
-            ['item_id' => 'item-1', 'consignor_id' => 'cons-1', 'consignor_share' => 12.5],
+            ['item_id' => 'item-1', 'quantity' => 1, 'consignor_id' => 'cons-1', 'consignor_share' => 12.5],
         ];
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('findById')->willReturn($sale);
@@ -425,7 +436,7 @@ final class PosServiceTest extends TestCase
         $saleRepo->expects($this->once())->method('markRefunded')->with('sale-1');
 
         $itemRepo = $this->createMock(ItemRepository::class);
-        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_AVAILABLE);
+        $itemRepo->expects($this->once())->method('increaseQuantity')->with('item-1', 1);
 
         $consignorService = $this->createMock(ConsignorService::class);
         $consignorService->expects($this->once())->method('recordManualAdjustment')->with('cons-1', -12.5, 'Refund sale-1');
@@ -449,7 +460,7 @@ final class PosServiceTest extends TestCase
     {
         $sale = $this->createSale(total: 50.0);
         $saleItems = [
-            ['item_id' => null, 'consignor_id' => 'cons-1', 'consignor_share' => 12.5],
+            ['item_id' => null, 'quantity' => 1, 'consignor_id' => 'cons-1', 'consignor_share' => 12.5],
         ];
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('findById')->willReturn($sale);
@@ -459,7 +470,7 @@ final class PosServiceTest extends TestCase
         $paymentRepo->method('getBySaleId')->willReturn([]);
 
         $itemRepo = $this->createMock(ItemRepository::class);
-        $itemRepo->expects($this->never())->method('updateStatus');
+        $itemRepo->expects($this->never())->method('increaseQuantity');
 
         $consignorService = $this->createMock(ConsignorService::class);
         $consignorService->expects($this->once())->method('recordManualAdjustment');
@@ -479,7 +490,8 @@ final class PosServiceTest extends TestCase
         $sale = $this->createSale(total: 30.0);
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
-        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_SOLD);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
+        $itemRepo->expects($this->once())->method('decreaseQuantity')->with('item-1', 1);
 
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('create')->willReturn('sale-1');
@@ -522,6 +534,7 @@ final class PosServiceTest extends TestCase
         $item = $this->createItem();
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
 
         $service = $this->createPosService(['itemRepository' => $itemRepo]);
         $this->expectException(\InvalidArgumentException::class);
@@ -533,7 +546,7 @@ final class PosServiceTest extends TestCase
     {
         $sale = $this->createSale(total: 50.0);
         $saleItems = [
-            ['item_id' => 'item-1', 'consignor_id' => 'cons-1', 'consignor_share' => 25.0],
+            ['item_id' => 'item-1', 'quantity' => 1, 'consignor_id' => 'cons-1', 'consignor_share' => 25.0],
         ];
         $salePayments = [
             ['id' => 'pay-1', 'method' => 'card', 'amount' => 50.0, 'reference' => 'ch_xyz'],
@@ -551,7 +564,7 @@ final class PosServiceTest extends TestCase
         $processor->expects($this->once())->method('refund')->with('ch_xyz', null)->willReturn('re_1');
 
         $itemRepo = $this->createMock(ItemRepository::class);
-        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_AVAILABLE);
+        $itemRepo->expects($this->once())->method('increaseQuantity')->with('item-1', 1);
 
         $consignorService = $this->createMock(ConsignorService::class);
         $consignorService->expects($this->once())->method('recordManualAdjustment')->with('cons-1', -25.0, 'Refund sale-1');
@@ -567,13 +580,68 @@ final class PosServiceTest extends TestCase
         $this->assertSame(50.0, $result['refunded_amount']);
     }
 
+    public function testCheckoutWithQuantityGreaterThanOne(): void
+    {
+        $item = $this->createItem(price: 10.0, quantity: 10);
+        $sale = $this->createSale(total: 30.0);
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->with('item-1')->willReturn(10);
+        $itemRepo->expects($this->once())->method('decreaseQuantity')->with('item-1', 3);
+
+        $saleRepo = $this->createMock(SaleRepository::class);
+        $saleRepo->method('create')->willReturn('sale-1');
+        $saleRepo->method('findById')->willReturn($sale);
+        $saleRepo->expects($this->once())->method('addSaleItem')->with(
+            'sale-1',
+            'item-1',
+            'cons-1',
+            3,
+            10.0,
+            0,
+            0,
+            15.0,
+            15.0
+        );
+
+        $paymentRepo = $this->createMock(PaymentRepository::class);
+        $paymentRepo->expects($this->once())->method('addPayment')->with('sale-1', 'cash', 30.0, null);
+
+        $consignorService = $this->createMock(ConsignorService::class);
+        $consignorService->expects($this->once())->method('recordManualAdjustment')->with('cons-1', 15.0, 'Sale sale-1');
+
+        $service = $this->createPosService([
+            'saleRepository' => $saleRepo,
+            'paymentRepository' => $paymentRepo,
+            'itemRepository' => $itemRepo,
+            'consignorService' => $consignorService,
+        ]);
+        $result = $service->checkout('user-1', null, null, [['item_id' => 'item-1', 'quantity' => 3]], [['method' => 'cash', 'amount' => 30.0]]);
+        $this->assertSame('sale-1', $result['sale_id']);
+        $this->assertSame(30.0, $result['subtotal']);
+    }
+
+    public function testCheckoutThrowsWhenQuantityExceedsAvailable(): void
+    {
+        $item = $this->createItem(quantity: 2);
+        $itemRepo = $this->createMock(ItemRepository::class);
+        $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->with('item-1')->willReturn(2);
+
+        $service = $this->createPosService(['itemRepository' => $itemRepo]);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requested quantity 3 exceeds available (2)');
+        $service->checkout('user-1', null, null, [['item_id' => 'item-1', 'quantity' => 3]], [['method' => 'cash', 'amount' => 75.0]]);
+    }
+
     public function testCheckoutWithItemLevelDiscount(): void
     {
         $item = $this->createItem(price: 40.0);
         $sale = $this->createSale(total: 35.0);
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
-        $itemRepo->expects($this->once())->method('updateStatus')->with('item-1', Item::STATUS_SOLD);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
+        $itemRepo->expects($this->once())->method('decreaseQuantity')->with('item-1', 1);
 
         $saleRepo = $this->createMock(SaleRepository::class);
         $saleRepo->method('create')->willReturn('sale-1');
@@ -614,6 +682,7 @@ final class PosServiceTest extends TestCase
         $item = $this->createItem(price: 10.0);
         $itemRepo = $this->createMock(ItemRepository::class);
         $itemRepo->method('findById')->willReturn($item);
+        $itemRepo->method('getAvailableQuantity')->willReturn(1);
 
         $service = $this->createPosService(['itemRepository' => $itemRepo]);
         $this->expectException(\InvalidArgumentException::class);
@@ -627,7 +696,7 @@ final class PosServiceTest extends TestCase
     private function createPosService(array $overrides = []): PosService
     {
         $pdo = $overrides['pdo'] ?? new \PDO('sqlite::memory:');
-        $pdo->exec('CREATE TABLE IF NOT EXISTS item_holds (item_id TEXT, held_id TEXT, user_id TEXT, created_at TEXT)');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS item_holds (item_id TEXT, held_id TEXT, user_id TEXT, quantity INTEGER NOT NULL DEFAULT 1, created_at TEXT)');
         $saleRepo = $overrides['saleRepository'] ?? $this->createMock(SaleRepository::class);
         $paymentRepo = $overrides['paymentRepository'] ?? $this->createMock(PaymentRepository::class);
         $itemRepo = $overrides['itemRepository'] ?? $this->createMock(ItemRepository::class);

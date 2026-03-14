@@ -29,6 +29,7 @@ final class Item
         public readonly float $storeSharePct,
         public readonly float $consignorSharePct,
         public readonly string $status,
+        public readonly int $quantity,
         public readonly \DateTimeImmutable $intakeDate,
         public readonly ?\DateTimeImmutable $expiryDate,
         public readonly \DateTimeImmutable $createdAt,
