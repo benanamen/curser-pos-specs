@@ -8,9 +8,11 @@ use CurserPos\Domain\Tenant\TenantProvisioningService;
 use CurserPos\Domain\User\User;
 use CurserPos\Domain\User\UserRepositoryInterface;
 use CurserPos\Service\AuthService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PerfectApp\Session\Session;
 
+#[AllowMockObjectsWithoutExpectations]
 final class AuthServiceTest extends TestCase
 {
     public function testLoginThrowsWhenUserNotFound(): void

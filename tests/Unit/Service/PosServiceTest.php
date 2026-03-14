@@ -18,8 +18,10 @@ use CurserPos\Domain\Sale\StoreCreditRepository;
 use CurserPos\Infrastructure\Payment\PaymentProcessorInterface;
 use CurserPos\Service\ConsignorService;
 use CurserPos\Service\PosService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PosServiceTest extends TestCase
 {
     private function createItem(

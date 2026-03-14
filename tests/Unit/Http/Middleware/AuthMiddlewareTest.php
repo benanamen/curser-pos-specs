@@ -12,9 +12,11 @@ use CurserPos\Domain\User\UserRepositoryInterface;
 use CurserPos\Http\Middleware\AuthMiddleware;
 use CurserPos\Http\RequestContext;
 use CurserPos\Service\AuditService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PerfectApp\Session\Session;
 
+#[AllowMockObjectsWithoutExpectations]
 final class AuthMiddlewareTest extends TestCase
 {
     public function testCallsNextWhenPathDoesNotRequireAuth(): void

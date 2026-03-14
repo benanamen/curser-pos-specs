@@ -7,10 +7,12 @@ namespace CurserPos\Tests\Unit\Domain\Consignor;
 use CurserPos\Domain\Consignor\Consignor;
 use CurserPos\Domain\Consignor\ConsignorBalance;
 use CurserPos\Domain\Consignor\ConsignorRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ConsignorRepositoryTest extends TestCase
 {
     private function consignorRow(string $id = 'cons-1'): array

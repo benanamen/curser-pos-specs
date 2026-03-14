@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Booth;
 
 use CurserPos\Domain\Booth\ConsignorBoothAssignment;
 use CurserPos\Domain\Booth\ConsignorBoothAssignmentRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ConsignorBoothAssignmentRepositoryTest extends TestCase
 {
     public function testGetActiveByConsignorIdReturnsNullWhenNotFound(): void

@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Item;
 
 use CurserPos\Domain\Item\Item;
 use CurserPos\Domain\Item\ItemRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ItemRepositoryTest extends TestCase
 {
     private function itemRow(string $id = 'item-1'): array

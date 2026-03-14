@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Sale;
 
 use CurserPos\Domain\Sale\StoreCreditRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class StoreCreditRepositoryTest extends TestCase
 {
     public function testFindByIdReturnsNullWhenNotFound(): void

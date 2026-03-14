@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\User;
 
 use CurserPos\Domain\User\User;
 use CurserPos\Domain\User\UserRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class UserRepositoryTest extends TestCase
 {
     public function testFindByEmailReturnsNullWhenNotFound(): void

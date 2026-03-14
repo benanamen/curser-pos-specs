@@ -9,8 +9,10 @@ use CurserPos\Domain\Consignor\ConsignorRepository;
 use CurserPos\Domain\Tenant\Tenant;
 use CurserPos\Http\Middleware\ConsignorPortalMiddleware;
 use CurserPos\Http\RequestContext;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ConsignorPortalMiddlewareTest extends TestCase
 {
     protected function tearDown(): void

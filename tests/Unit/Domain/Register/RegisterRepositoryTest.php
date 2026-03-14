@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Register;
 
 use CurserPos\Domain\Register\Register;
 use CurserPos\Domain\Register\RegisterRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RegisterRepositoryTest extends TestCase
 {
     public function testFindByIdReturnsNullWhenNotFound(): void

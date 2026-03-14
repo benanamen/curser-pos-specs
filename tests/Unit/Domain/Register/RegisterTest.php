@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Register;
 
 use CurserPos\Domain\Register\Register;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RegisterTest extends TestCase
 {
     public function testConstruction(): void

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\User;
 
 use CurserPos\Domain\User\PasswordResetTokenRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PasswordResetTokenRepositoryTest extends TestCase
 {
     public function testCreateTokenReturnsToken(): void

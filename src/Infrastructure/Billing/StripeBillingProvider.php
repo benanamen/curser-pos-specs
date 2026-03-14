@@ -188,7 +188,6 @@ final class StripeBillingProvider implements BillingProviderInterface
 
         $body = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($body === false) {
             throw new \RuntimeException('Stripe API request failed');

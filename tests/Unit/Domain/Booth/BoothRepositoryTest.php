@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Booth;
 
 use CurserPos\Domain\Booth\Booth;
 use CurserPos\Domain\Booth\BoothRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class BoothRepositoryTest extends TestCase
 {
     public function testFindByIdReturnsNullWhenNotFound(): void

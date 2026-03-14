@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Sale;
 
 use CurserPos\Domain\Sale\ItemHoldRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ItemHoldRepositoryTest extends TestCase
 {
     public function testReserveItemsNoopWhenEmpty(): void

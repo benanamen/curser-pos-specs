@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\User;
 
 use CurserPos\Domain\User\InviteTokenRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class InviteTokenRepositoryTest extends TestCase
 {
     public function testCreateReturnsToken(): void

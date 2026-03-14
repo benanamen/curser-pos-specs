@@ -6,8 +6,10 @@ namespace CurserPos\Tests\Unit\Infrastructure\Billing;
 
 use CurserPos\Domain\Billing\TenantBillingRepository;
 use CurserPos\Infrastructure\Billing\StripeBillingProvider;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class StripeBillingProviderTest extends TestCase
 {
     public function testCreateSubscriptionThrowsWhenPlanNotConfigured(): void

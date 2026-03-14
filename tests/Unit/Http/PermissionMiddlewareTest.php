@@ -7,8 +7,10 @@ namespace CurserPos\Tests\Unit\Http;
 use CurserPos\Domain\Tenant\Tenant;
 use CurserPos\Http\Middleware\PermissionMiddleware;
 use CurserPos\Http\RequestContext;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PermissionMiddlewareTest extends TestCase
 {
     public function testCallsNextWhenNoTenant(): void

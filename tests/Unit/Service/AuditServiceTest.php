@@ -6,8 +6,10 @@ namespace CurserPos\Tests\Unit\Service;
 
 use CurserPos\Domain\Audit\ActivityLogRepository;
 use CurserPos\Service\AuditService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class AuditServiceTest extends TestCase
 {
     public function testLogCallsRepository(): void

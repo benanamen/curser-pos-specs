@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Category;
 
 use CurserPos\Domain\Category\Category;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class CategoryTest extends TestCase
 {
     public function testConstruction(): void

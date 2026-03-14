@@ -8,8 +8,10 @@ use CurserPos\Domain\Consignor\Consignor;
 use CurserPos\Domain\Consignor\ConsignorBalance;
 use CurserPos\Domain\Consignor\ConsignorRepository;
 use CurserPos\Service\ConsignorService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ConsignorServiceTest extends TestCase
 {
     public function testCreateConsignorThrowsWhenSlugExists(): void

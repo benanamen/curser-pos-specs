@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Infrastructure\Payment;
 
 use CurserPos\Infrastructure\Payment\PaymentResult;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PaymentResultTest extends TestCase
 {
     public function testSuccessFactory(): void

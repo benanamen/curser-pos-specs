@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Http;
 
 use CurserPos\Http\RequestContext;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RequestContextTest extends TestCase
 {
     public function testFromGlobalsCreatesContext(): void

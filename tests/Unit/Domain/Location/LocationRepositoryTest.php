@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Location;
 
 use CurserPos\Domain\Location\Location;
 use CurserPos\Domain\Location\LocationRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class LocationRepositoryTest extends TestCase
 {
     public function testFindByIdReturnsNullWhenNotFound(): void

@@ -7,9 +7,11 @@ namespace CurserPos\Tests\Unit\Http\Middleware;
 use CurserPos\Domain\Tenant\Tenant;
 use CurserPos\Http\Middleware\SchemaContextMiddleware;
 use CurserPos\Http\RequestContext;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 
+#[AllowMockObjectsWithoutExpectations]
 final class SchemaContextMiddlewareTest extends TestCase
 {
     public function testCallsNextWhenTenantIsNull(): void

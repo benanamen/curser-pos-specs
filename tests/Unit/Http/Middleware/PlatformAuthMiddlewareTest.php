@@ -6,9 +6,11 @@ namespace CurserPos\Tests\Unit\Http\Middleware;
 
 use CurserPos\Http\Middleware\PlatformAuthMiddleware;
 use CurserPos\Http\RequestContext;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PerfectApp\Session\Session;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PlatformAuthMiddlewareTest extends TestCase
 {
     public function testCallsNextWhenPathNotPlatform(): void

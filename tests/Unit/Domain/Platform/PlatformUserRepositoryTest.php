@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Platform;
 
 use CurserPos\Domain\Platform\PlatformUserRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PlatformUserRepositoryTest extends TestCase
 {
     public function testFindByEmailReturnsNullWhenNotFound(): void

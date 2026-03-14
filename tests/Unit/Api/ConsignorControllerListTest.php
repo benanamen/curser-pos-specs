@@ -12,8 +12,10 @@ use CurserPos\Domain\Consignor\ConsignorBalance;
 use CurserPos\Domain\Consignor\ConsignorRepository;
 use CurserPos\Service\BoothRentalService;
 use CurserPos\Service\ConsignorService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ConsignorControllerListTest extends TestCase
 {
     public function testListReturnsActiveConsignorsWithBalances(): void

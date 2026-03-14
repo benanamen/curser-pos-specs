@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Http\Middleware;
 
 use CurserPos\Http\Middleware\Pipeline;
 use CurserPos\Http\RequestContext;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PerfectApp\Routing\Router;
 use Psr\Container\ContainerInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PipelineTest extends TestCase
 {
     public function testAddReturnsSelf(): void

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Billing;
 
 use CurserPos\Domain\Billing\TenantBillingRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class TenantBillingRepositoryTest extends TestCase
 {
     public function testFindByTenantIdReturnsNullWhenNotFound(): void

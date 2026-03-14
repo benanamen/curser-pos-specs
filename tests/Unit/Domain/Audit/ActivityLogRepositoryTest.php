@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Audit;
 
 use CurserPos\Domain\Audit\ActivityLogRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ActivityLogRepositoryTest extends TestCase
 {
     public function testLogInsertsRow(): void

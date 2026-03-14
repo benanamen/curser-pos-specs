@@ -6,9 +6,11 @@ namespace CurserPos\Tests\Unit\Service;
 
 use CurserPos\Domain\Platform\PlatformUserRepository;
 use CurserPos\Service\PlatformAuthService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PerfectApp\Session\Session;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PlatformAuthServiceTest extends TestCase
 {
     public function testLoginThrowsWhenUserNotFound(): void

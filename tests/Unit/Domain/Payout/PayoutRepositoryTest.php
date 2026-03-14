@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Payout;
 
 use CurserPos\Domain\Payout\PayoutRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PayoutRepositoryTest extends TestCase
 {
     public function testCreateExecutesInsertAndReturnsId(): void

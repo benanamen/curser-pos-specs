@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Tenant;
 
 use CurserPos\Domain\Role\RoleRepository;
 use CurserPos\Domain\Tenant\TenantUserRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class TenantUserRepositoryTest extends TestCase
 {
     public function testGetByUserAndTenantReturnsNullWhenNotFound(): void

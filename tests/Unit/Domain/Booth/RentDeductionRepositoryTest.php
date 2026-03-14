@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Booth;
 
 use CurserPos\Domain\Booth\RentDeductionRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RentDeductionRepositoryTest extends TestCase
 {
     public function testGetLastDeductionDateReturnsNullWhenNotFound(): void

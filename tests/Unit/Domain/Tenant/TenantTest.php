@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Tenant;
 
 use CurserPos\Domain\Tenant\Tenant;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class TenantTest extends TestCase
 {
     public function testSchemaName(): void

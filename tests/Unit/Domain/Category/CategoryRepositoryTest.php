@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Category;
 
 use CurserPos\Domain\Category\Category;
 use CurserPos\Domain\Category\CategoryRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class CategoryRepositoryTest extends TestCase
 {
     public function testFindByIdReturnsNullWhenNotFound(): void

@@ -8,8 +8,10 @@ use CurserPos\Domain\Tenant\Tenant;
 use CurserPos\Domain\Tenant\TenantRepositoryInterface;
 use CurserPos\Http\Middleware\TenantResolutionMiddleware;
 use CurserPos\Http\RequestContext;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class TenantResolutionMiddlewareTest extends TestCase
 {
     public function testCallsNextWhenPathDoesNotStartWithPrefix(): void

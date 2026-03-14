@@ -7,9 +7,11 @@ namespace CurserPos\Tests\Unit\Domain\Tenant;
 use CurserPos\Domain\Tenant\TenantProvisioningService;
 use CurserPos\Domain\Tenant\TenantRepositoryInterface;
 use CurserPos\Domain\User\UserRepositoryInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 
+#[AllowMockObjectsWithoutExpectations]
 class TenantProvisioningServiceTest extends TestCase
 {
     private PDO $pdo;

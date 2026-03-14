@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Sale;
 
 use CurserPos\Domain\Sale\GiftCardRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class GiftCardRepositoryTest extends TestCase
 {
     public function testFindByCodeReturnsNullWhenNotFound(): void

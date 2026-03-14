@@ -7,9 +7,11 @@ namespace CurserPos\Tests\Unit\Service;
 use CurserPos\Domain\Item\Item;
 use CurserPos\Domain\Item\ItemRepository;
 use CurserPos\Service\InventoryService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 
+#[AllowMockObjectsWithoutExpectations]
 final class InventoryServiceTest extends TestCase
 {
     public function testCreateItemThrowsWhenSkuExists(): void

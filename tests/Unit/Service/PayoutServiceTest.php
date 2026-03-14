@@ -11,8 +11,10 @@ use CurserPos\Domain\Payout\PayoutRepository;
 use CurserPos\Service\BoothRentalService;
 use CurserPos\Service\ConsignorService;
 use CurserPos\Service\PayoutService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PayoutServiceTest extends TestCase
 {
     public function testRunPayoutRunWithNoConsignors(): void

@@ -6,9 +6,11 @@ namespace CurserPos\Tests\Unit\Http;
 
 use CurserPos\Http\Kernel;
 use CurserPos\Http\Middleware\Pipeline;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class KernelTest extends TestCase
 {
     public function testHandleGetsPipelineAndCallsProcess(): void

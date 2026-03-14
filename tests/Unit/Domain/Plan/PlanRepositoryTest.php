@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Plan;
 
 use CurserPos\Domain\Plan\PlanRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PlanRepositoryTest extends TestCase
 {
     public function testListReturnsPlansWithJsonDecodedFeatures(): void

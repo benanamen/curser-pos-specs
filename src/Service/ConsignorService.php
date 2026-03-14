@@ -132,13 +132,13 @@ class ConsignorService
         if ($lines === []) {
             return ['created' => [], 'errors' => [['row' => 0, 'message' => 'Empty or invalid CSV']]];
         }
-        $header = str_getcsv(array_shift($lines));
+        $header = str_getcsv(array_shift($lines), ',', '"', '\\');
         $header = array_map('trim', $header);
         $created = [];
         $errors = [];
         $rowNum = 2;
         foreach ($lines as $line) {
-            $row = str_getcsv($line);
+            $row = str_getcsv($line, ',', '"', '\\');
             $assoc = array_combine($header, array_pad($row, count($header), null));
             if ($assoc === false) {
                 $errors[] = ['row' => $rowNum, 'message' => 'Column count mismatch'];

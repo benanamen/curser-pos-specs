@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Service;
 
 use CurserPos\Domain\Booth\RentDeductionRepository;
 use CurserPos\Service\ReportService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class ReportServiceTest extends TestCase
 {
     public function testSalesSummary(): void

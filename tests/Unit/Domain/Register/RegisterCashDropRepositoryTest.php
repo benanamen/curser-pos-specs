@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Register;
 
 use CurserPos\Domain\Register\RegisterCashDropRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RegisterCashDropRepositoryTest extends TestCase
 {
     public function testRecordExecutesAndReturnsId(): void

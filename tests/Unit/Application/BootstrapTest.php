@@ -6,8 +6,10 @@ namespace CurserPos\Tests\Unit\Application;
 
 use CurserPos\Application\Bootstrap;
 use CurserPos\Http\Kernel;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class BootstrapTest extends TestCase
 {
     protected function tearDown(): void

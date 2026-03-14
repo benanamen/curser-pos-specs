@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Sale;
 
 use CurserPos\Domain\Sale\PaymentRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PaymentRepositoryTest extends TestCase
 {
     public function testGetBySaleIdReturnsMappedRows(): void

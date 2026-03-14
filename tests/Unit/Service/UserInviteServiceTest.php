@@ -9,8 +9,10 @@ use CurserPos\Domain\User\InviteTokenRepository;
 use CurserPos\Domain\User\User;
 use CurserPos\Domain\User\UserRepositoryInterface;
 use CurserPos\Service\UserInviteService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class UserInviteServiceTest extends TestCase
 {
     public function testInviteReturnsToken(): void

@@ -10,8 +10,10 @@ use CurserPos\Domain\Plan\PlanRepository;
 use CurserPos\Domain\Tenant\Tenant;
 use CurserPos\Domain\Tenant\TenantRepositoryInterface;
 use CurserPos\Service\BillingService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class BillingServiceTest extends TestCase
 {
     public function testCreateSubscriptionThrowsWhenTenantNotFound(): void

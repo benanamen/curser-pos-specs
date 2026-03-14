@@ -10,8 +10,10 @@ use CurserPos\Domain\Booth\ConsignorBoothAssignment;
 use CurserPos\Domain\Booth\ConsignorBoothAssignmentRepository;
 use CurserPos\Domain\Booth\RentDeductionRepository;
 use CurserPos\Service\BoothRentalService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class BoothRentalServiceTest extends TestCase
 {
     public function testAssignToBoothThrowsWhenBoothNotFound(): void

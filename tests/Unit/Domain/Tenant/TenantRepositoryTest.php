@@ -6,10 +6,12 @@ namespace CurserPos\Tests\Unit\Domain\Tenant;
 
 use CurserPos\Domain\Tenant\Tenant;
 use CurserPos\Domain\Tenant\TenantRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 class TenantRepositoryTest extends TestCase
 {
     public function testFindBySlugReturnsNullWhenNotFound(): void

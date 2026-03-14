@@ -6,8 +6,10 @@ namespace CurserPos\Tests\Unit\Http;
 
 use CurserPos\Http\RequestContext;
 use CurserPos\Http\RequestContextHolder;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RequestContextHolderTest extends TestCase
 {
     protected function tearDown(): void

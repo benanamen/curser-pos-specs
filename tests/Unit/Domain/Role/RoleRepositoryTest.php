@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace CurserPos\Tests\Unit\Domain\Role;
 
 use CurserPos\Domain\Role\RoleRepository;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use PDO;
 use PDOStatement;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RoleRepositoryTest extends TestCase
 {
     public function testGetByIdReturnsNullWhenNotFound(): void

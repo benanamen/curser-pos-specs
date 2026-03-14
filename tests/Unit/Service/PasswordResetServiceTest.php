@@ -8,8 +8,10 @@ use CurserPos\Domain\User\PasswordResetTokenRepository;
 use CurserPos\Domain\User\User;
 use CurserPos\Domain\User\UserRepositoryInterface;
 use CurserPos\Service\PasswordResetService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class PasswordResetServiceTest extends TestCase
 {
     public function testRequestResetReturnsNullWhenUserNotFound(): void
