@@ -133,7 +133,9 @@ final class PosService
         foreach ($payments as $p) {
             $paymentTotal += (float) ($p['amount'] ?? 0);
         }
-        if ($paymentTotal < $total - 0.01) {
+        $totalCents = (int) round($total * 100);
+        $paymentCents = (int) round($paymentTotal * 100);
+        if ($paymentCents < $totalCents) {
             throw new \InvalidArgumentException('Payment total is less than sale total');
         }
 
